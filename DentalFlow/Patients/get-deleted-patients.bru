@@ -1,0 +1,25 @@
+meta {
+  name: Get Deleted Patients
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/patients/deleted?page=1&limit=10
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Deleted Patients
+  description: Get all deleted patients for the authenticated user's clinic.
+  
+  Query Parameters:
+  - page: Page number (default: 1)
+  - limit: Items per page (default: 10)
+  
+  Returns a paginated list of deleted patients with total count.
+  Patients are ordered by deletion date (most recently deleted first).
+} 

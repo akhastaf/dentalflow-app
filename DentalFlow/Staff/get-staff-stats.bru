@@ -1,0 +1,22 @@
+meta {
+  name: Get Staff Statistics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/staff/stats
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Staff Statistics
+  description: Get staff statistics for the authenticated user's clinic.
+  
+  Returns:
+  - total: Total number of staff members
+  - byRole: Object with role counts (e.g., {"admin": 2, "doctor": 5, "assistant": 3})
+} 

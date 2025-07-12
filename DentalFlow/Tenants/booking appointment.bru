@@ -1,0 +1,25 @@
+meta {
+  name: booking appointment
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{BASE_URL}}/{{VERSION}}/{{RESOURCE}}/halima/appointments/public
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "fullName": "Abderrazzaq Khastaf",
+    "phone": "+212708139402",
+    "email": "john@example.com",
+    "gender": "male",
+    "birthDate": "1994-02-13",
+    "date": "2025-07-04",
+    "startTime": "10:30:00",
+    "endTime": "11:00:00",
+    "notes": "Some notes for the doctor"
+  }
+}

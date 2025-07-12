@@ -1,0 +1,99 @@
+meta {
+  name: Create Patient
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/patients
+  body: json
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "fullName": "John Doe",
+    "phone": "+1234567890",
+    "email": "john@example.com",
+    "gender": "male",
+    "birthDate": "1990-01-01",
+    "address": "123 Main St, City",
+    "emergencyContactName": "Jane Doe",
+    "emergencyContactRelationship": "Spouse",
+    "emergencyContactPhone": "+1234567891",
+    "emergencyContactAddress": "123 Main St, City",
+    "insuranceProvider": "Blue Cross Blue Shield",
+    "insuranceNumber": "BCBS123456",
+    "notes": "Patient prefers morning appointments",
+    "allergies": [
+      {
+        "name": "Penicillin",
+        "description": "Severe reaction",
+        "severity": "High"
+      },
+      {
+        "name": "Latex",
+        "description": "Mild skin irritation",
+        "severity": "Low"
+      }
+    ],
+    "medicalHistories": [
+      {
+        "condition": "Diabetes",
+        "description": "Type 2 diabetes diagnosed in 2020",
+        "diagnosedDate": "2020-01-01",
+        "isActive": true,
+        "medications": ["Metformin", "Insulin"]
+      },
+      {
+        "condition": "Hypertension",
+        "description": "High blood pressure",
+        "diagnosedDate": "2018-03-15",
+        "isActive": true,
+        "medications": ["Lisinopril"]
+      }
+    ],
+    "previousDentalHistory": [
+      {
+        "procedure": "Filling",
+        "tooth": "Tooth 14",
+        "performedDate": "2023-06-15",
+        "performedBy": "Dr. Smith",
+        "notes": "Good condition, no issues"
+      },
+      {
+        "procedure": "Cleaning",
+        "performedDate": "2023-12-01",
+        "performedBy": "Dr. Johnson",
+        "notes": "Regular cleaning, good oral hygiene"
+      }
+    ],
+    "isPregnant": false
+  }
+}
+
+docs {
+  name: Create Patient
+  description: Create a new patient with detailed medical information including allergies, medical history, and dental history.
+  
+  This endpoint allows authenticated users to create patients in their clinic with comprehensive medical information:
+  
+  - Basic patient information (name, phone, email, address)
+  - Personal details (gender, birth date)
+  - Emergency contact information
+  - Insurance details
+  - Allergies (list of allergy objects with name, description, severity)
+  - Medical history (conditions, medications, diagnosis dates)
+  - Previous dental history (procedures, teeth treated, dates)
+  - Pregnancy status (for female patients)
+  
+  The patient will be automatically associated with the user's tenant (clinic).
+  Phone numbers must be unique within the clinic.
+} 

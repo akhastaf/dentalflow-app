@@ -1,0 +1,23 @@
+meta {
+  name: Delete Staff Member
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/staff/{{staffId}}
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Delete Staff Member
+  description: Delete a staff member (soft delete).
+  
+  This endpoint performs a soft delete, meaning the staff member record is marked as deleted but not physically removed from the database.
+  The staff member will no longer appear in regular queries but their data is preserved for audit purposes.
+  
+  Staff members can be restored using the restore endpoint if needed.
+} 

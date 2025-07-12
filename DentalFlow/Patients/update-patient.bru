@@ -1,0 +1,56 @@
+meta {
+  name: Update Patient
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/patients/{{patientId}}
+  body: json
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "fullName": "John Smith",
+    "email": "john.smith@example.com",
+    "allergies": [
+      {
+        "name": "Latex",
+        "description": "Mild skin irritation",
+        "severity": "Low"
+      },
+      {
+        "name": "Sulfa drugs",
+        "description": "Rash and itching",
+        "severity": "Medium"
+      }
+    ],
+    "medicalHistories": [
+      {
+        "condition": "Diabetes",
+        "description": "Type 2 diabetes",
+        "diagnosedDate": "2020-01-01",
+        "isActive": true,
+        "medications": ["Metformin"]
+      }
+    ],
+    "notes": "Updated patient information"
+  }
+}
+
+docs {
+  name: Update Patient
+  description: Update a patient's information.
+  
+  This endpoint allows partial updates of patient information.
+  Only the fields provided in the request body will be updated.
+  Phone number changes will be validated for uniqueness within the clinic.
+} 

@@ -1,0 +1,27 @@
+meta {
+  name: Get Staff Members
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/staff?search=john&role=doctor&page=1&limit=10
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Staff Members
+  description: Get all staff members for the authenticated user's clinic with optional filtering and pagination.
+  
+  Query Parameters:
+  - search: Search by user name or email
+  - role: Filter by role (admin, doctor, assistant, reception)
+  - page: Page number (default: 1)
+  - limit: Items per page (default: 10)
+  
+  Returns a paginated list of staff members with total count.
+  Staff members are ordered by creation date (newest first).
+} 

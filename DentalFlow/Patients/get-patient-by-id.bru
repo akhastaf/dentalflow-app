@@ -1,0 +1,21 @@
+meta {
+  name: Get Patient by ID
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/patients/{{patientId}}
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Patient by ID
+  description: Get a specific patient by their ID.
+  
+  The patient ID should be a valid UUID.
+  Returns the patient with all their details including relationships to appointments, documents, attachments, and treatments.
+} 

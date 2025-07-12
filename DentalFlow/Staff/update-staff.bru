@@ -1,0 +1,48 @@
+meta {
+  name: Update Staff Member
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/staff/{{staffId}}
+  body: json
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "role": "admin",
+    "workingDays": [1, 2, 3, 4, 5, 6],
+    "salaryAmount": 10000.00,
+    "customPermissions": [
+      "patient_read",
+      "patient_write",
+      "appointment_read",
+      "appointment_write",
+      "staff_read",
+      "staff_write"
+    ]
+  }
+}
+
+docs {
+  name: Update Staff Member
+  description: Update a staff member's information.
+  
+  This endpoint allows partial updates of staff member information.
+  Only the fields provided in the request body will be updated.
+  
+  Common updates include:
+  - Changing role assignments
+  - Updating working days
+  - Modifying salary information
+  - Overriding permissions
+} 

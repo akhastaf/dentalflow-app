@@ -1,0 +1,73 @@
+meta {
+  name: Document Module Tests
+  type: http
+  seq: 1
+}
+
+# 1. Create Document
+post {
+  url: {{baseUrl}}/documents
+  body: json
+}
+headers {
+  Content-Type: application/json
+}
+body:json {
+  {
+    "patientId": "{{patientId}}",
+    "type": "report",
+    "title": "Dental X-Ray Report",
+    "description": "Routine checkup x-ray",
+    "fileUrl": "https://files.example.com/doc.pdf"
+  }
+}
+docs {
+  name: Create Document
+  description: Create a new document for a patient.
+}
+
+# 2. List Documents
+get {
+  url: {{baseUrl}}/documents?patientId={{patientId}}&type=report&search=x-ray&page=1&limit=10
+}
+docs {
+  name: List Documents
+  description: List/filter documents for a patient.
+}
+
+# 3. Get Document by ID
+get {
+  url: {{baseUrl}}/documents/{{documentId}}
+}
+docs {
+  name: Get Document by ID
+  description: Get a single document by its ID.
+}
+
+# 4. Update Document
+patch {
+  url: {{baseUrl}}/documents/{{documentId}}
+  body: json
+}
+headers {
+  Content-Type: application/json
+}
+body:json {
+  {
+    "title": "Updated Title",
+    "description": "Updated description"
+  }
+}
+docs {
+  name: Update Document
+  description: Update a document's metadata.
+}
+
+# 5. Delete Document
+delete {
+  url: {{baseUrl}}/documents/{{documentId}}
+}
+docs {
+  name: Delete Document
+  description: Soft delete a document by its ID.
+} 

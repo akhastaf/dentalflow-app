@@ -1,0 +1,60 @@
+meta {
+  name: Create Staff with User Account
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/staff/with-user
+  body: json
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "doctor.smith@clinic.com",
+    "first_name": "Dr. John",
+    "last_name": "Smith",
+    "password": "securePassword123",
+    "role": "doctor",
+    "workingDays": [1, 2, 3, 4, 5],
+    "salaryType": "fixed",
+    "salaryAmount": 8000.00,
+    "customPermissions": [
+      "patient_read",
+      "patient_write",
+      "appointment_read",
+      "appointment_write",
+      "document_read",
+      "document_write"
+    ]
+  }
+}
+
+docs {
+  name: Create Staff with User Account
+  description: Create a new staff member with a complete user account.
+  
+  This endpoint allows clinic administrators to:
+  1. Create a new user account with email, name, and password
+  2. Automatically assign the user to staff in their clinic
+  3. Set role, working days, salary, and custom permissions
+  
+  The created user can immediately login with their email and password.
+  
+  Features:
+  - Password is automatically hashed
+  - User account is created first, then staff record
+  - Staff is automatically associated with admin's tenant
+  - Email uniqueness is validated
+  - Custom permissions can override role defaults
+  
+  Returns both the created user and staff records.
+} 

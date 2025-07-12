@@ -1,0 +1,21 @@
+meta {
+  name: Delete Patient
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/patients/{{patientId}}
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Delete Patient
+  description: Delete a patient (soft delete).
+  
+  This endpoint performs a soft delete, meaning the patient record is marked as deleted but not physically removed from the database.
+  The patient will no longer appear in regular queries but their data is preserved for audit purposes.
+} 

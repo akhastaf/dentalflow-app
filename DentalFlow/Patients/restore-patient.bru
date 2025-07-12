@@ -1,0 +1,22 @@
+meta {
+  name: Restore Patient
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/patients/{{patientId}}/restore
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Restore Patient
+  description: Restore a deleted patient.
+  
+  This endpoint restores a previously deleted patient. The patient will become active again and can be accessed through normal patient endpoints.
+  
+  Note: If there's already an active patient with the same phone number, the restore operation will fail to prevent conflicts.
+} 

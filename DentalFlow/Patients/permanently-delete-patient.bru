@@ -1,0 +1,23 @@
+meta {
+  name: Permanently Delete Patient
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/patients/{{patientId}}/permanent
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Permanently Delete Patient
+  description: Permanently delete a patient (cannot be undone).
+  
+  ⚠️ WARNING: This operation permanently removes the patient from the database and cannot be undone.
+  Use this endpoint with extreme caution as it will permanently delete all patient data.
+  
+  This is different from the regular DELETE endpoint which performs a soft delete.
+} 

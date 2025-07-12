@@ -1,0 +1,28 @@
+meta {
+  name: Get Patients
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/patients?search=john&page=1&limit=10
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Patients
+  description: Get all patients for the authenticated user's clinic with optional filtering and pagination.
+  
+  Query Parameters:
+  - search: Search by name, phone, or email
+  - phone: Filter by phone number
+  - email: Filter by email
+  - gender: Filter by gender (male/female)
+  - page: Page number (default: 1)
+  - limit: Items per page (default: 10)
+  
+  Returns a paginated list of patients with total count.
+} 

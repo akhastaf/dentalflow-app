@@ -1,0 +1,47 @@
+meta {
+  name: Create Staff Member
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/staff
+  body: json
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "userId": "{{userId}}",
+    "role": "doctor",
+    "workingDays": [1, 2, 3, 4, 5],
+    "salaryType": "fixed",
+    "salaryAmount": 8000.00,
+    "customPermissions": [
+      "patient_read",
+      "patient_write",
+      "appointment_read",
+      "appointment_write"
+    ]
+  }
+}
+
+docs {
+  name: Create Staff Member
+  description: Create a new staff member by assigning a user to a role in the clinic.
+  
+  This endpoint allows clinic administrators to:
+  - Assign users to specific roles (doctor, admin, assistant, reception)
+  - Set working days and salary information
+  - Override default role permissions with custom permissions
+  
+  The staff member will be automatically associated with the authenticated user's tenant (clinic).
+  Each user can only be assigned to one role per clinic.
+} 

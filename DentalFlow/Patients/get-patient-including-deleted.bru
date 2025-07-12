@@ -1,0 +1,24 @@
+meta {
+  name: Get Patient Including Deleted
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/patients/{{patientId}}/deleted
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Patient Including Deleted
+  description: Get a specific patient by ID, including deleted patients.
+  
+  This endpoint can retrieve both active and deleted patients.
+  Useful for checking if a patient exists but was soft deleted.
+  
+  The patient ID should be a valid UUID.
+  Returns the patient with all their details including relationships to appointments, documents, attachments, and treatments.
+} 

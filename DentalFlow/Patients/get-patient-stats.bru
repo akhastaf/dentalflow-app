@@ -1,0 +1,24 @@
+meta {
+  name: Get Patient Stats
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/patients/stats
+  auth: {
+    type: bearer
+    bearer: {{authToken}}
+  }
+}
+
+docs {
+  name: Get Patient Statistics
+  description: Get patient statistics for the authenticated user's clinic.
+  
+  Returns:
+  - total: Total number of patients
+  - male: Number of male patients
+  - female: Number of female patients
+  - thisMonth: Number of patients created this month
+} 
