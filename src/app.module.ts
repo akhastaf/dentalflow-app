@@ -7,7 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { NotificationModule } from './notification/notification.module';
 import { PatientModule } from './patient/patient.module';
 import { AppointmentsModule } from './appointment/appointment.module';
-import { TreatmentsModule } from './treatment/treatments.module';
+import { TreatmentModule } from './treatment/treatment.module';
 import { PaymentsModule } from './payment/payment.module';
 import { ExpenseModule } from './expense/expense.module';
 import { StocksModule } from './stock/stocks.module';
@@ -39,8 +39,8 @@ import { MinioModule } from './minio/minio.module';
     StaffModule,
     CaslAbilityModule,
     MinioModule,
+    TreatmentModule,
     // InventoriesModule,
-    // TreatmentsModule
   ],
   controllers: [],
   providers: [],
