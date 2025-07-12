@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your Email</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 5px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {{#if companyLogo}}
+            <img src="{{companyLogo}}" alt="{{companyName}}" class="logo">
+            {{/if}}
+        </div>
+        
+        <div class="content">
+            <h2>Hello {{userName}},</h2>
+            
+            <p>Thank you for signing up with {{companyName}}! Please confirm your email address by clicking the button below:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{confirmationLink}}" class="button">Confirm Email Address</a>
+            </div>
+            
+            <p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
+            <p>{{confirmationLink}}</p>
+            
+            <p>This confirmation link will expire in {{expiryTime}} hours.</p>
+            
+            <p>If you didn't create an account with {{companyName}}, please ignore this email.</p>
+            
+            <p>Best regards,<br>
+            The {{companyName}} Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p>{{companyAddress}}</p>
+            {{#if unsubscribeLink}}
+            <p><a href="{{unsubscribeLink}}">Unsubscribe</a></p>
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html>

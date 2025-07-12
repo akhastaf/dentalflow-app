@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Authentication Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .code-container {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 6px;
+            border: 2px solid #e9ecef;
+        }
+        .verification-code {
+            color: #007bff;
+            font-size: 32px;
+            font-weight: bold;
+            margin: 0;
+            letter-spacing: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {{#if companyLogo}}
+            <img src="{{companyLogo}}" alt="{{companyName}}" class="logo">
+            {{/if}}
+        </div>
+        
+        <div class="content">
+            <h2>Two-Factor Authentication Code</h2>
+            
+            <p>Hello {{userName}},</p>
+            
+            <p>You have requested a two-factor authentication code for your {{companyName}} account.</p>
+            
+            <div class="code-container">
+                <p class="verification-code">{{code}}</p>
+            </div>
+            
+            <div class="warning">
+                <strong>Important:</strong> This code will expire in {{expiryTime}} minutes for security reasons.
+            </div>
+            
+            <p>If you didn't request this code, please:</p>
+            <ul>
+                <li>Ignore this email</li>
+                <li>Check your account for any suspicious activity</li>
+                <li>Contact support if you have concerns</li>
+            </ul>
+            
+            <p>Best regards,<br>
+            The {{companyName}} Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p>{{companyAddress}}</p>
+            {{#if unsubscribeLink}}
+            <p><a href="{{unsubscribeLink}}">Unsubscribe</a></p>
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html> 
