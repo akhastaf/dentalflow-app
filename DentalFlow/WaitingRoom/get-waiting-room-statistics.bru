@@ -1,0 +1,24 @@
+meta {
+  name: Get Waiting Room Statistics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/waiting-room/statistics
+  auth: bearer
+}
+
+docs {
+  Get waiting room statistics for the current tenant.
+  
+  Returns:
+  - total: Total number of entries
+  - waiting: Number of patients waiting
+  - called: Number of patients called
+  - inConsultation: Number of patients in consultation
+  - completed: Number of completed consultations
+  - cancelled: Number of cancelled entries
+  - emergency: Number of emergency patients
+  - urgent: Number of urgent patients
+} 

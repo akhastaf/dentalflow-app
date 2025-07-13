@@ -14,6 +14,7 @@ import { TenantService } from 'src/tenant/tenant.service';
 import { StaffService } from 'src/staff/staff.service';
 import { StaffRole, SalaryType } from 'src/staff/entities/staff.entity';
 import { Request } from 'express';
+import { EntityNotFoundError } from 'typeorm';
 import * as crypto from 'crypto';
 
 export interface LoginResponse {
@@ -48,7 +49,16 @@ export class AuthService {
         };
         
         console.log('Creating user with data:', userData);
-        const newUser: User|undefined = await this.userService.createWithBasicData(userData);
+        let newUser: User|undefined;
+        try {
+            newUser = await this.userService.createWithBasicData(userData);
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error; // Re-throw the specific email error
+            }
+            throw new BadRequestException('Failed to create user account');
+        }
+        
         if (!newUser) {
             throw new BadRequestException('Failed to create user account');
         }
@@ -62,7 +72,7 @@ export class AuthService {
             email: registerDto.email, // Use user's email as tenant email
             address: registerDto.tenantAddress,
             city: registerDto.tenantCity,
-            taxId: registerDto.tenantTaxId,
+    
             ownerUserId: newUser.user_id,
         };
 
@@ -154,11 +164,15 @@ export class AuthService {
             };
 
         } catch (e) {
-            if (e instanceof BadRequestException || e instanceof NotFoundException) {
+            if (e instanceof BadRequestException) {
                 throw e;
             } else if (e instanceof UnauthorizedException) {
                 throw e;
+            } else if (e instanceof NotFoundException) {
+                // Handle TypeORM EntityNotFoundError specifically
+                throw new BadRequestException('Invalid email or password');
             } else {
+                console.error('Login error:', e);
                 throw new InternalServerErrorException('Something went wrong');
             }
         }
@@ -405,6 +419,88 @@ export class AuthService {
                 throw error;
             }
             throw new InternalServerErrorException('Failed to reset password');
+        }
+    }
+
+    /**
+     * Resend verification email
+     */
+    async resendVerification(email: string): Promise<{ message: string }> {
+        try {
+            const user = await this.findUserByEmail(email);
+            if (!user) {
+                throw new BadRequestException('User not found');
+            }
+
+            if (user.is_verified) {
+                throw new BadRequestException('User is already verified');
+            }
+
+            // Send confirmation email
+            this.mailService.sendUserConfirmation(user);
+            
+            return { message: 'Verification email sent successfully' };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            throw new InternalServerErrorException('Failed to resend verification email');
+        }
+    }
+
+    /**
+     * Verify email with JWT token
+     */
+    async verifyEmail(token: string): Promise<{ message: string }> {
+        try {
+            console.log('Verifying email with token:', token);
+            
+            // Get the JWT secret for email verification
+            const jwtSecret = this.configService.get('JWT_EMAIL_VERIFICATION_SECRET');
+            if (!jwtSecret) {
+                console.error('JWT_EMAIL_VERIFICATION_SECRET is not configured');
+                throw new InternalServerErrorException('Email verification is not properly configured');
+            }
+            
+            console.log('Using JWT secret for verification');
+            
+            // Verify the JWT token
+            const payload = this.jwtService.verify(token, {
+                secret: jwtSecret
+            });
+            
+            console.log('JWT payload:', payload);
+
+            // Find user by email from token
+            const user = await this.findUserByEmail(payload.email);
+            if (!user) {
+                console.log('User not found for email:', payload.email);
+                throw new BadRequestException('User not found');
+            }
+
+            // Check if user is already verified
+            if (user.is_verified) {
+                console.log('User is already verified:', user.email);
+                throw new BadRequestException('User is already verified');
+            }
+
+            // Mark user as verified
+            await this.userService.verifyUser(user.user_id);
+            console.log('User verified successfully:', user.email);
+            
+            return { message: 'Email verified successfully' };
+        } catch (error) {
+            console.error('Email verification error:', error);
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            if (error.name === 'TokenExpiredError') {
+                throw new BadRequestException('Verification token has expired');
+            }
+            if (error.name === 'JsonWebTokenError') {
+                throw new BadRequestException('Invalid verification token');
+            }
+            throw new InternalServerErrorException('Failed to verify email');
         }
     }
 }

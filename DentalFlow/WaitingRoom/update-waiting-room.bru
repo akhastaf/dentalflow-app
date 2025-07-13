@@ -1,0 +1,37 @@
+meta {
+  name: Update Waiting Room Entry
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/waiting-room/{{waitingRoomId}}
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "assignedDoctorId": "{{doctorId}}",
+    "emergencyLevel": "urgent",
+    "order": 2,
+    "notes": "Updated notes - patient has severe pain"
+  }
+}
+
+docs {
+  Update a waiting room entry with new information.
+  
+  Can update:
+  - assignedDoctorId: Change assigned doctor
+  - emergencyLevel: Change priority level
+  - status: Change status (with proper validation)
+  - order: Change queue position
+  - notes: Update notes
+  
+  Order changes are validated to ensure uniqueness per tenant.
+} 

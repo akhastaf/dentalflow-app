@@ -23,61 +23,87 @@ export class TwoFactorService {
         backupCodes: string[];
         message: string;
     }> {
-        const user = await this.userService.findById(userId);
-        if (!user) {
-            throw new BadRequestException('User not found');
-        }
-
-        if (user.twoFactorEnabled) {
-            throw new BadRequestException('2FA is already enabled');
-        }
-
-        const backupCodes = this.generateBackupCodes();
-        
-        if (method === TwoFactorMethod.AUTHENTICATOR) {
-            const secret = speakeasy.generateSecret({
-                name: `DentalFlow (${user.email})`,
-                issuer: 'DentalFlow',
-                length: 32
-            });
-
-            const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
-
-            // Update user with secret and backup codes
-            await this.userService.update2FASetup(userId, {
-                twoFactorMethod: method,
-                twoFactorSecret: secret.base32,
-                twoFactorBackupCodes: JSON.stringify(backupCodes),
-                twoFactorEnabled: false // Will be enabled after verification
-            });
-
-            return {
-                secret: secret.base32,
-                qrCode,
-                backupCodes,
-                message: 'Scan the QR code with your authenticator app, then verify with a code'
-            };
-        } else if (method === TwoFactorMethod.EMAIL) {
-            // For email 2FA, we'll send a code via email
-            const tempCode = this.generateTempCode();
+        try {
+            console.log('Setting up 2FA for user:', userId, 'method:', method);
             
-            await this.userService.update2FASetup(userId, {
-                twoFactorMethod: method,
-                twoFactorSecret: tempCode, // Store temp code as secret
-                twoFactorBackupCodes: JSON.stringify(backupCodes),
-                twoFactorEnabled: false
-            });
+            const user = await this.userService.findById(userId);
+            if (!user) {
+                console.error('User not found:', userId);
+                throw new BadRequestException('User not found');
+            }
 
-            // Send email with verification code
-            await this.mailService.send2FACode(user.email, tempCode);
+            console.log('Found user:', user.email);
 
-            return {
-                backupCodes,
-                message: 'Verification code sent to your email'
-            };
+            if (user.twoFactorEnabled) {
+                console.log('2FA already enabled for user:', user.email);
+                throw new BadRequestException('2FA is already enabled');
+            }
+
+            const backupCodes = this.generateBackupCodes();
+            console.log('Generated backup codes');
+            
+            if (method === TwoFactorMethod.AUTHENTICATOR) {
+                console.log('Setting up authenticator 2FA');
+                
+                const secret = speakeasy.generateSecret({
+                    name: `DentalFlow (${user.email})`,
+                    issuer: 'DentalFlow',
+                    length: 32
+                });
+
+                console.log('Generated secret for authenticator');
+
+                const qrCode = await QRCode.toDataURL(secret.otpauth_url!);
+                console.log('Generated QR code');
+
+                // Update user with secret and backup codes
+                await this.userService.update2FASetup(userId, {
+                    twoFactorMethod: method,
+                    twoFactorSecret: secret.base32,
+                    twoFactorBackupCodes: JSON.stringify(backupCodes),
+                    twoFactorEnabled: false // Will be enabled after verification
+                });
+
+                console.log('Updated user 2FA setup');
+
+                return {
+                    secret: secret.base32,
+                    qrCode,
+                    backupCodes,
+                    message: 'Scan the QR code with your authenticator app, then verify with a code'
+                };
+            } else if (method === TwoFactorMethod.EMAIL) {
+                console.log('Setting up email 2FA');
+                
+                // For email 2FA, we'll send a code via email
+                const tempCode = this.generateTempCode();
+                console.log('Generated temp code for email 2FA');
+                
+                await this.userService.update2FASetup(userId, {
+                    twoFactorMethod: method,
+                    twoFactorSecret: tempCode, // Store temp code as secret
+                    twoFactorBackupCodes: JSON.stringify(backupCodes),
+                    twoFactorEnabled: false
+                });
+
+                console.log('Updated user 2FA setup for email');
+
+                // Send email with verification code
+                await this.mailService.send2FACode(user.email, tempCode);
+                console.log('Sent 2FA code email');
+
+                return {
+                    backupCodes,
+                    message: 'Verification code sent to your email'
+                };
+            }
+
+            console.error('Invalid 2FA method:', method);
+            throw new BadRequestException('Invalid 2FA method');
+        } catch (error) {
+            console.error('Error in setup2FA:', error);
+            throw error;
         }
-
-        throw new BadRequestException('Invalid 2FA method');
     }
 
     /**

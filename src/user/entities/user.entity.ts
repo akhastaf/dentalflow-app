@@ -71,7 +71,7 @@ export class User {
   twoFactorEnabled: boolean;
 
   @Exclude()
-  @Column({ type: 'varchar', length: 6, nullable: true })
+  @Column({ type: 'text', nullable: true })
   twoFactorBackupCodes?: string; // JSON array of backup codes
 
   @Exclude()

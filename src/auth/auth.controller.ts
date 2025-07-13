@@ -171,7 +171,22 @@ export class AuthController {
     @Body() setup2FADto: Setup2FADto,
     @CurrentUser() user: User
   ) {
-    return await this.authService.setup2FA(user.user_id, setup2FADto.method);
+    try {
+      console.log('2FA setup request for user:', user.user_id, 'method:', setup2FADto.method);
+      console.log('User object:', JSON.stringify(user, null, 2));
+      
+      // Test database connection
+      const testUser = await this.authService.findUserByEmail(user.email);
+      console.log('Test user lookup:', testUser ? 'success' : 'failed');
+      
+      const result = await this.authService.setup2FA(user.user_id, setup2FADto.method);
+      console.log('2FA setup successful for user:', user.user_id);
+      return result;
+    } catch (error) {
+      console.error('2FA setup error:', error);
+      console.error('Error stack:', error.stack);
+      throw error;
+    }
   }
 
   @Post('2fa/verify-setup')
@@ -321,5 +336,50 @@ export class AuthController {
   async validateResetToken(@Body() body: { token: string }) {
       const emailToken = await this.emailTokenService.validateToken(body.token, EmailTokenType.PASSWORD_RESET);
       return { valid: !!emailToken };
+  }
+
+  @Post('resend-verification')
+  @ApiOperation({ summary: 'Resend email verification' })
+  @ApiResponse({ status: 200, description: 'Verification email sent successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  async resendVerification(@Body() body: { email: string }) {
+    return await this.authService.resendVerification(body.email);
+  }
+
+  @Post('verify-email')
+  @ApiOperation({ summary: 'Verify email with token' })
+  @ApiResponse({ status: 200, description: 'Email verified successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  async verifyEmail(@Body() body: { token: string }) {
+    return await this.authService.verifyEmail(body.token);
+  }
+
+  @Get('test-db')
+  @ApiOperation({ summary: 'Test database connection' })
+  async testDatabase() {
+    try {
+      const user = await this.authService.findUserByEmail('test@example.com');
+      
+      // Test 2FA fields
+      const testUser = await this.authService.findUserByEmail('test@example.com');
+      const has2FAFields = testUser && 
+        'twoFactorMethod' in testUser && 
+        'twoFactorEnabled' in testUser && 
+        'twoFactorSecret' in testUser;
+      
+      return { 
+        success: true, 
+        message: 'Database connection working',
+        userFound: !!user,
+        has2FAFields,
+        userFields: testUser ? Object.keys(testUser) : []
+      };
+    } catch (error) {
+      return { 
+        success: false, 
+        message: 'Database connection failed',
+        error: error.message 
+      };
+    }
   }
 }

@@ -222,7 +222,7 @@ export class MailService {
         try {
             // Create database token for password reset
             const emailToken = await this.emailTokenService.createPasswordResetToken(user);
-            const resetLink = `${this.configService.get<string>("CLIENT_URL")}/auth/reset-password?token=${emailToken.token}`;
+            const resetLink = `${this.configService.get<string>("CLIENT_URL")}/auth/password/reset?token=${emailToken.token}`;
 
             // Prepare template parameters
             const templateParams: PasswordResetTemplate = {

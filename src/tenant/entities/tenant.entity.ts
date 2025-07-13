@@ -97,9 +97,7 @@ export class Tenant {
   })
   timezone?: string;
 
-  // Moroccan tax ID (ICE - Identifiant Commun de l'Entreprise)
-  @Column({ length: 50, nullable: true })
-  taxId?: string;
+
 
   // Owner/Admin reference
   @Column({ nullable: true })

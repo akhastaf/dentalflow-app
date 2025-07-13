@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
+import * as bcrypt from 'bcryptjs'
 
 @Injectable()
 export class UserService {
@@ -43,6 +44,14 @@ export class UserService {
             return await this.userRepository.save(user);
         } catch (error) {
             console.log("user create with basic data ", error);
+            
+            // Check if it's a duplicate email error
+            if (error.code === '23505' && error.constraint === 'UQ_97672ac88f789774dd47f7c8be3') {
+                throw new BadRequestException('Email already exists. Please use a different email address or try logging in.');
+            }
+            
+            // Re-throw other errors
+            throw error;
         }
     }
 
@@ -83,7 +92,7 @@ export class UserService {
                 throw new NotFoundException('User not found');
             }
             
-            user.password = newPassword;
+            user.password = await bcrypt.hash(newPassword, 10);
             user.is_verified = true;
             
             return await this.userRepository.save(user);
@@ -106,7 +115,7 @@ export class UserService {
 
             return user;
         } catch (error) {
-            console.log('', error)
+            console.log('test', error)
             throw new NotFoundException('user not found');
         }
     }
@@ -165,7 +174,14 @@ export class UserService {
         twoFactorBackupCodes?: string;
         twoFactorEnabled: boolean;
     }): Promise<void> {
-        await this.userRepository.update(userId, twoFAData);
+        try {
+            console.log('Updating 2FA setup for user:', userId, 'data:', twoFAData);
+            const result = await this.userRepository.update(userId, twoFAData);
+            console.log('2FA setup update result:', result);
+        } catch (error) {
+            console.error('Error updating 2FA setup:', error);
+            throw error;
+        }
     }
 
     /**
@@ -311,6 +327,16 @@ export class UserService {
         await this.userRepository.update(userId, {
             passwordResetToken: undefined,
             passwordResetExpiresAt: undefined
+        });
+    }
+
+    /**
+     * Verify user email
+     * @param userId 
+     */
+    async verifyUser(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            is_verified: true
         });
     }
 }

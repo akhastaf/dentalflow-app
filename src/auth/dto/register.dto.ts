@@ -48,8 +48,5 @@ export class RegisterDto {
     @IsNotEmpty()
     tenantCity: string;
 
-    @ApiProperty({ example: 'ICE123456789', description: 'Tax ID (optional)', required: false })
-    @IsString()
-    @IsOptional()
-    tenantTaxId?: string;
+
 }
