@@ -1,0 +1,17 @@
+meta {
+  name: Complete Consultation
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/waiting-room/{{waitingRoomId}}/complete-consultation
+  auth: bearer
+}
+
+docs {
+  Complete a consultation with a patient. This changes the status from 'in_consultation' to 'completed'.
+  
+  The patient must be in 'in_consultation' status to complete consultation.
+  This action records the consultation end time.
+} 

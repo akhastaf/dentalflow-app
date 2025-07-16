@@ -1,0 +1,30 @@
+meta {
+  name: Call Patient
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/waiting-room/{{waitingRoomId}}/call
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "assignedDoctorId": "{{doctorId}}",
+    "notes": "Patient called to consultation room 1"
+  }
+}
+
+docs {
+  Call a patient from the waiting room. This changes the status from 'waiting' to 'called'.
+  
+  The patient must be in 'waiting' status to be called.
+  If assignedDoctorId is provided, it will assign the patient to that doctor.
+  Notes can be added to provide additional context.
+} 

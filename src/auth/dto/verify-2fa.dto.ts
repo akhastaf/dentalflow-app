@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { TwoFactorMethod } from '../../user/entities/user.entity';
 
 export class Verify2FADto {
     @ApiProperty({ 
@@ -9,4 +10,13 @@ export class Verify2FADto {
     @IsString()
     @IsNotEmpty()
     code: string;
+
+    @ApiProperty({ 
+        example: 'authenticator', 
+        description: '2FA method being verified',
+        enum: TwoFactorMethod
+    })
+    @IsEnum(TwoFactorMethod)
+    @IsNotEmpty()
+    method: TwoFactorMethod;
 } 

@@ -17,6 +17,7 @@ import { StaffModule } from './staff/staff.module';
 import { TenantModule } from './tenant/tenant.module';
 import { CaslAbilityModule } from './casl/casl-ability.module';
 import { MinioModule } from './minio/minio.module';
+import { WaitingRoomModule } from './waiting-room/waiting-room.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MinioModule } from './minio/minio.module';
     CaslAbilityModule,
     MinioModule,
     TreatmentModule,
+    WaitingRoomModule,
     // InventoriesModule,
   ],
   controllers: [],
