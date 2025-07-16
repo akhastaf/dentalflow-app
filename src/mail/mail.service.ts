@@ -429,4 +429,81 @@ export class MailService {
             throw error;
         }
     }
+
+    /**
+     * Send backup code usage notification
+     * 
+     * Sends a security notification to users when their backup code is used
+     * to alert them of potentially unauthorized activity.
+     * 
+     * @param user - User entity containing email and user information
+     * @returns Promise that resolves when email is sent
+     */
+    async sendBackupCodeUsedNotification(user: User): Promise<void> {
+        this.logger.log(`Sending backup code usage notification to ${user.email}`);
+
+        try {
+            const currentTime = new Date().toLocaleString();
+            const ipAddress = 'Unknown'; // In a real implementation, you'd get this from the request context
+            
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Backup Code Used - DentalFlow</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #d32f2f;">⚠️ Security Alert</h2>
+                        <p>Hello ${user.first_name || user.email},</p>
+                        <p>We detected that a backup code was used to access your DentalFlow account.</p>
+                        
+                        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                            <h3 style="margin-top: 0; color: #856404;">Account Access Details:</h3>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li><strong>Time:</strong> ${currentTime}</li>
+                                <li><strong>IP Address:</strong> ${ipAddress}</li>
+                                <li><strong>Method:</strong> Backup Code</li>
+                            </ul>
+                        </div>
+                        
+                        <p><strong>If this was you:</strong></p>
+                        <ul>
+                            <li>No action is required</li>
+                            <li>Consider regenerating your backup codes for enhanced security</li>
+                            <li>Review your authenticator devices</li>
+                        </ul>
+                        
+                        <p><strong>If this wasn't you:</strong></p>
+                        <ul>
+                            <li>Change your password immediately</li>
+                            <li>Disable and re-enable 2FA</li>
+                            <li>Generate new backup codes</li>
+                            <li>Contact support if needed</li>
+                        </ul>
+                        
+                        <p>For your security, the used backup code has been invalidated and can no longer be used.</p>
+                        
+                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+                            <p>This is an automated security notification from DentalFlow.</p>
+                            <p>If you have any questions, please contact our support team.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            // Send email
+            await this.sendEmail({
+                to: user.email,
+                subject: 'Security Alert: Backup Code Used - DentalFlow',
+                html
+            });
+
+        } catch (error) {
+            this.logger.error(`Failed to send backup code notification to ${user.email}:`, error);
+            // Don't throw error for notification failures to avoid breaking the login flow
+        }
+    }
 }

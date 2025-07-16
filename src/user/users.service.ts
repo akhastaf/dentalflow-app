@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { User, TwoFactorMethod } from './entities/user.entity';
+import { User } from './entities/user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
 import { RegisterDto } from 'src/auth/dto/register.dto';
 import { CreateUserDto } from './dtos/create-user.dto';
 import * as bcrypt from 'bcryptjs'
@@ -169,10 +169,7 @@ export class UserService {
      * @param twoFAData 
      */
     async update2FASetup(userId: string, twoFAData: {
-        twoFactorMethod: TwoFactorMethod;
-        twoFactorSecret?: string;
         twoFactorBackupCodes?: string;
-        twoFactorEnabled: boolean;
     }): Promise<void> {
         try {
             console.log('Updating 2FA setup for user:', userId, 'data:', twoFAData);
@@ -185,25 +182,180 @@ export class UserService {
     }
 
     /**
-     * Enable 2FA
+     * Update Authenticator 2FA setup
+     * @param userId 
+     * @param twoFAData 
+     */
+    async updateAuthenticator2FA(userId: string, twoFAData: {
+        twoFactorAuthenticatorSecret?: string;
+        twoFactorBackupCodes?: string;
+        twoFactorAuthenticatorEnabled: boolean;
+    }): Promise<void> {
+        try {
+            console.log('Updating Authenticator 2FA setup for user:', userId, 'data:', twoFAData);
+            const result = await this.userRepository.update(userId, twoFAData);
+            console.log('Authenticator 2FA setup update result:', result);
+        } catch (error) {
+            console.error('Error updating Authenticator 2FA setup:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update Email 2FA setup
+     * @param userId 
+     * @param twoFAData 
+     */
+    async updateEmail2FA(userId: string, twoFAData: {
+        twoFactorEmailSecret?: string;
+        twoFactorEmailExpiresAt?: Date;
+        twoFactorBackupCodes?: string;
+        twoFactorEmailEnabled: boolean;
+    }): Promise<void> {
+        try {
+            console.log('Updating Email 2FA setup for user:', userId, 'data:', twoFAData);
+            const result = await this.userRepository.update(userId, twoFAData);
+            console.log('Email 2FA setup update result:', result);
+        } catch (error) {
+            console.error('Error updating Email 2FA setup:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update Email 2FA for login (sending new code)
+     * @param userId 
+     * @param twoFAData 
+     */
+    async updateEmail2FALogin(userId: string, twoFAData: {
+        twoFactorEmailSecret?: string;
+        twoFactorEmailExpiresAt?: Date;
+        twoFactorEmailAttempts: number;
+    }): Promise<void> {
+        try {
+            console.log('Updating Email 2FA login for user:', userId, 'data:', twoFAData);
+            const result = await this.userRepository.update(userId, twoFAData);
+            console.log('Email 2FA login update result:', result);
+        } catch (error) {
+            console.error('Error updating Email 2FA login:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update Email 2FA attempts
+     * @param userId 
+     * @param attempts 
+     */
+    async updateEmail2FAAttempts(userId: string, attempts: number): Promise<void> {
+        try {
+            await this.userRepository.update(userId, {
+                twoFactorEmailAttempts: attempts
+            });
+        } catch (error) {
+            console.error('Error updating Email 2FA attempts:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Lock Email 2FA
+     * @param userId 
+     * @param lockUntil 
+     */
+    async lockEmail2FA(userId: string, lockUntil: Date): Promise<void> {
+        try {
+            await this.userRepository.update(userId, {
+                twoFactorEmailLockedUntil: lockUntil
+            });
+        } catch (error) {
+            console.error('Error locking Email 2FA:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Enable 2FA (deprecated - use specific enable methods)
      * @param userId 
      */
     async enable2FA(userId: string): Promise<void> {
         await this.userRepository.update(userId, {
-            twoFactorEnabled: true,
             twoFactorVerifiedAt: new Date()
         });
     }
 
     /**
-     * Disable 2FA
+     * Enable Authenticator 2FA
+     * @param userId 
+     */
+    async enableAuthenticator2FA(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorAuthenticatorEnabled: true,
+            twoFactorVerifiedAt: new Date()
+        });
+    }
+
+    /**
+     * Enable Email 2FA
+     * @param userId 
+     */
+    async enableEmail2FA(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorEmailEnabled: true,
+            twoFactorVerifiedAt: new Date()
+        });
+    }
+
+    /**
+     * Disable 2FA (deprecated - use specific disable methods)
      * @param userId 
      */
     async disable2FA(userId: string): Promise<void> {
         await this.userRepository.update(userId, {
-            twoFactorEnabled: false,
-            twoFactorMethod: TwoFactorMethod.NONE,
-            twoFactorSecret: undefined,
+            twoFactorAuthenticatorSecret: undefined,
+            twoFactorBackupCodes: undefined,
+            twoFactorVerifiedAt: undefined
+        });
+    }
+
+    /**
+     * Disable Authenticator 2FA
+     * @param userId 
+     */
+    async disableAuthenticator2FA(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorAuthenticatorEnabled: false,
+            twoFactorAuthenticatorSecret: undefined
+        });
+    }
+
+    /**
+     * Disable Email 2FA
+     * @param userId 
+     */
+    async disableEmail2FA(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorEmailEnabled: false,
+            twoFactorEmailSecret: undefined,
+            twoFactorEmailExpiresAt: undefined,
+            twoFactorEmailAttempts: 0,
+            twoFactorEmailLockedUntil: undefined
+        });
+    }
+
+    /**
+     * Disable all 2FA methods and clear backup codes
+     * @param userId 
+     */
+    async disableAll2FA(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorAuthenticatorEnabled: false,
+            twoFactorAuthenticatorSecret: undefined,
+            twoFactorEmailEnabled: false,
+            twoFactorEmailSecret: undefined,
+            twoFactorEmailExpiresAt: undefined,
+            twoFactorEmailAttempts: 0,
+            twoFactorEmailLockedUntil: undefined,
             twoFactorBackupCodes: undefined,
             twoFactorVerifiedAt: undefined
         });
@@ -217,6 +369,64 @@ export class UserService {
     async updateBackupCodes(userId: string, backupCodes: string): Promise<void> {
         await this.userRepository.update(userId, {
             twoFactorBackupCodes: backupCodes
+        });
+    }
+
+    /**
+     * Get backup codes
+     * @param userId 
+     * @returns backup codes array or null
+     */
+    async getBackupCodes(userId: string): Promise<string[] | null> {
+        const user = await this.findById(userId);
+        if (!user || !user.twoFactorBackupCodes) {
+            return null;
+        }
+        
+        try {
+            return JSON.parse(user.twoFactorBackupCodes);
+        } catch (error) {
+            console.error('Failed to parse backup codes:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Update pre-auth token
+     * @param userId 
+     * @param token 
+     * @param expiresAt 
+     */
+    async updatePreAuthToken(userId: string, token: string, expiresAt: Date): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorPreAuthToken: token,
+            twoFactorPreAuthExpiresAt: expiresAt
+        });
+    }
+
+    /**
+     * Find user by pre-auth token
+     * @param token 
+     * @returns user or null
+     */
+    async findByPreAuthToken(token: string): Promise<User | null> {
+        const user = await this.userRepository.findOne({
+            where: { 
+                twoFactorPreAuthToken: token,
+                twoFactorPreAuthExpiresAt: MoreThan(new Date())
+            }
+        });
+        return user;
+    }
+
+    /**
+     * Clear pre-auth token
+     * @param userId 
+     */
+    async clearPreAuthToken(userId: string): Promise<void> {
+        await this.userRepository.update(userId, {
+            twoFactorPreAuthToken: undefined,
+            twoFactorPreAuthExpiresAt: undefined
         });
     }
 

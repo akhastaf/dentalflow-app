@@ -55,28 +55,50 @@ export class User {
 
   // 🔐 2FA Fields
   @Exclude()
-  @Column({ 
-    type: 'enum', 
-    enum: TwoFactorMethod, 
-    default: TwoFactorMethod.NONE 
-  })
-  twoFactorMethod: TwoFactorMethod;
-
-  @Exclude()
   @Column({ type: 'varchar', length: 255, nullable: true })
-  twoFactorSecret?: string; // For authenticator apps
+  twoFactorAuthenticatorSecret?: string; // For authenticator apps (renamed from twoFactorSecret)
 
   @Exclude()
   @Column({ type: 'boolean', default: false })
-  twoFactorEnabled: boolean;
+  twoFactorAuthenticatorEnabled: boolean;
+
+  @Exclude()
+  @Column({ type: 'boolean', default: false })
+  twoFactorEmailEnabled: boolean;
 
   @Exclude()
   @Column({ type: 'text', nullable: true })
-  twoFactorBackupCodes?: string; // JSON array of backup codes
+  twoFactorBackupCodes?: string; // JSON array of hashed backup codes
 
   @Exclude()
   @Column({ type: 'timestamptz', nullable: true })
   twoFactorVerifiedAt?: Date;
+
+  // Pre-auth token for 2FA flow
+  @Exclude()
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  twoFactorPreAuthToken?: string;
+
+  @Exclude()
+  @Column({ type: 'timestamptz', nullable: true })
+  twoFactorPreAuthExpiresAt?: Date;
+
+  // Email 2FA specific fields
+  @Exclude()
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  twoFactorEmailSecret?: string; // Temporary email OTP code
+
+  @Exclude()
+  @Column({ type: 'timestamptz', nullable: true })
+  twoFactorEmailExpiresAt?: Date; // Email OTP expiration
+
+  @Exclude()
+  @Column({ type: 'int', default: 0 })
+  twoFactorEmailAttempts: number; // Track failed attempts
+
+  @Exclude()
+  @Column({ type: 'timestamptz', nullable: true })
+  twoFactorEmailLockedUntil?: Date; // Lock email 2FA after too many attempts
 
   // 📧 Email verification
   @Exclude()
@@ -195,7 +217,7 @@ export class User {
 
   // 🔐 2FA Methods
   async verifyTwoFactorCode(code: string): Promise<boolean> {
-    if (!this.twoFactorSecret || this.twoFactorMethod === TwoFactorMethod.NONE) {
+    if (!this.twoFactorAuthenticatorSecret) {
       return false;
     }
     
