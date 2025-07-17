@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsInt, IsUUID, Min, MaxLength } from 'class-validator';
+
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EmergencyLevel, WaitingRoomStatus } from '../entities/waiting-room.entity';
 
@@ -16,6 +17,7 @@ export class UpdateWaitingRoomDto {
     example: EmergencyLevel.URGENT,
     description: 'Emergency level of the patient'
   })
+
   @IsOptional()
   @IsEnum(EmergencyLevel)
   emergencyLevel?: EmergencyLevel;
@@ -25,6 +27,7 @@ export class UpdateWaitingRoomDto {
     example: WaitingRoomStatus.CALLED,
     description: 'Current status of the patient in waiting room'
   })
+
   @IsOptional()
   @IsEnum(WaitingRoomStatus)
   status?: WaitingRoomStatus;
@@ -34,6 +37,7 @@ export class UpdateWaitingRoomDto {
     description: 'Order/priority in the waiting room (1 = highest priority)',
     minimum: 1
   })
+
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -54,6 +58,7 @@ export class UpdateWaitingRoomDto {
     description: 'Reason for cancellation if status is cancelled',
     maxLength: 200
   })
+
   @IsOptional()
   @IsString()
   @MaxLength(200)

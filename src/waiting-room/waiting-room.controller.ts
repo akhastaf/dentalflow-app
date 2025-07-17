@@ -40,6 +40,7 @@ export class WaitingRoomController {
   ) {}
 
   @Post()
+
   @ApiOperation({
     summary: 'Add patient to waiting room,',
     description: 'Add a new patient to the waiting room with optional doctor assignment and priority'
@@ -61,6 +62,7 @@ export class WaitingRoomController {
   @ApiResponse({ status: 400, description: 'Bad request - Invalid data provided' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Patient or doctor not found' })
+
   async create(
     @Body() createWaitingRoomDto: CreateWaitingRoomDto,
     @Request() req: RequestWithUser,
@@ -107,6 +109,7 @@ export class WaitingRoomController {
     }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+
   async findAll(
     @Query() filterDto: FilterWaitingRoomDto,
     @Request() req: RequestWithUser,
@@ -149,6 +152,7 @@ export class WaitingRoomController {
     }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+
   async getStatistics(@Request() req: RequestWithUser) {
     const tenantId = await this.getTenantIdFromUser(req.user.user_id);
     return await this.waitingRoomService.getStatistics(tenantId);
@@ -187,6 +191,7 @@ export class WaitingRoomController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async findOne(
     @Param('id') id: string,
     @Request() req: RequestWithUser,
@@ -225,6 +230,7 @@ export class WaitingRoomController {
   @ApiResponse({ status: 400, description: 'Bad request - Invalid data provided' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async update(
     @Param('id') id: string,
     @Body() updateWaitingRoomDto: UpdateWaitingRoomDto,
@@ -266,6 +272,7 @@ export class WaitingRoomController {
   @ApiResponse({ status: 400, description: 'Bad request - Patient already called or in consultation' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async callPatient(
     @Param('id') id: string,
     @Body() callPatientDto: CallPatientDto,
@@ -305,6 +312,7 @@ export class WaitingRoomController {
   @ApiResponse({ status: 400, description: 'Bad request - Patient not called or already in consultation' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async startConsultation(
     @Param('id') id: string,
     @Request() req: RequestWithUser,
@@ -342,6 +350,7 @@ export class WaitingRoomController {
   @ApiResponse({ status: 400, description: 'Bad request - Patient not in consultation' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async completeConsultation(
     @Param('id') id: string,
     @Request() req: RequestWithUser,
@@ -381,6 +390,7 @@ export class WaitingRoomController {
   @ApiResponse({ status: 400, description: 'Bad request - Patient already completed or cancelled' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async cancelPatient(
     @Param('id') id: string,
     @Body() cancelPatientDto: CancelPatientDto,
@@ -434,6 +444,7 @@ export class WaitingRoomController {
   })
   @ApiResponse({ status: 400, description: 'Bad request - Invalid order data' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+
   async reorder(
     @Param('id') id: string,
     @Body() reorderData: { id: string; newOrder: number }[],
@@ -467,6 +478,7 @@ export class WaitingRoomController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
   @ApiResponse({ status: 404, description: 'Waiting room entry not found' })
+
   async remove(
     @Param('id') id: string,
     @Request() req: RequestWithUser,

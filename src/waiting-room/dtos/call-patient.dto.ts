@@ -9,11 +9,12 @@ export class CallPatientDto {
   @IsOptional()
   @IsUUID()
   assignedDoctorId?: string;
-
+  
   @ApiPropertyOptional({
     example: 'Patient called to consultation room 2',
     description: 'Additional notes about the call',    maxLength: 200
   })
+
   @IsOptional()
   @IsString()
   @MaxLength(200)

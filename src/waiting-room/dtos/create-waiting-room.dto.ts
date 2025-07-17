@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsInt, IsUUID, Min, MaxLength } from 'class-validator';
+
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { EmergencyLevel } from '../entities/waiting-room.entity';
 
@@ -42,6 +43,7 @@ export class CreateWaitingRoomDto {
     description: 'Additional notes about the patient, maxLength: 500',
     maxLength: 500
   })
+
   @IsOptional()
   @IsString()
   @MaxLength(500)
