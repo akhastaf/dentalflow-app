@@ -243,9 +243,4 @@ export class StaffService {
 
     await this.repo.remove(staff);
   }
-
-  async findById(id: string): Promise<Staff | undefined> {
-    const staff = await this.repo.findOne({ where: { id } });
-    return staff || undefined;
-  }
 }

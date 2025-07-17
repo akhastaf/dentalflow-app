@@ -92,9 +92,9 @@ export class PaymentService {
       // Update treatment's paid amount
       treatment.amountPaid += ptDto.amountPaid;
       
-      // Update treatment status to completed if fully paid
+      // Update treatment status to done if fully paid
       if (treatment.amountPaid >= treatment.amount) {
-        treatment.status = TreatmentStatus.COMPLETED;
+        treatment.status = TreatmentStatus.DONE;
       }
 
       await this.treatmentRepo.save(treatment);
@@ -270,7 +270,7 @@ export class PaymentService {
       where: {
         patientId,
         tenantId,
-        status: In([TreatmentStatus.PLANNED, TreatmentStatus.COMPLETED]),
+        status: In([TreatmentStatus.PLANNED, TreatmentStatus.DONE]),
       },
       order: { createdAt: 'ASC' }
     });

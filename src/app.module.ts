@@ -7,7 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { NotificationModule } from './notification/notification.module';
 import { PatientModule } from './patient/patient.module';
 import { AppointmentsModule } from './appointment/appointment.module';
-import { TreatmentModule } from './treatment/treatment.module';
+import { TreatmentsModule } from './treatment/treatments.module';
 import { PaymentsModule } from './payment/payment.module';
 import { ExpenseModule } from './expense/expense.module';
 import { StocksModule } from './stock/stocks.module';
@@ -17,7 +17,6 @@ import { StaffModule } from './staff/staff.module';
 import { TenantModule } from './tenant/tenant.module';
 import { CaslAbilityModule } from './casl/casl-ability.module';
 import { MinioModule } from './minio/minio.module';
-import { WaitingRoomModule } from './waiting-room/waiting-room.module';
 
 @Module({
   imports: [
@@ -40,9 +39,8 @@ import { WaitingRoomModule } from './waiting-room/waiting-room.module';
     StaffModule,
     CaslAbilityModule,
     MinioModule,
-    TreatmentModule,
-    WaitingRoomModule,
     // InventoriesModule,
+    // TreatmentsModule
   ],
   controllers: [],
   providers: [],

@@ -17,7 +17,7 @@ define(Tenant, (fakerInstance: typeof faker, context?: { user: User })  => {
   const languages = Object.values(Language);
   tenant.language = languages[Math.floor(Math.random() * languages.length)];
   tenant.timezone = 'Africa/Casablanca';
-  
+  tenant.taxId = `ICE${Math.floor(Math.random() * 900000) + 100000}`;
   tenant.owner = context?.user;
 
   return tenant;
