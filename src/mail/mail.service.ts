@@ -8,6 +8,7 @@ import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import { ConfirmationTemplate } from "src/types/confirmation-template";
 import { PasswordResetTemplate } from "src/types/password-reset-template";
 import { TwoFactorAuthTemplate } from "src/types/2fa-template";
+import { BackupCodeUsedTemplate } from "src/types/backup-code-used-template";
 import { JwtPayload } from "src/types/jwt-payload";
 import { User } from "src/user/entities/user.entity";
 import { EmailTokenService } from "./email-token.service";
@@ -43,6 +44,7 @@ export class MailService {
     private confirmationTemplate: handlebars.TemplateDelegate;
     private passwordResetTemplate: handlebars.TemplateDelegate;
     private twoFactorAuthTemplate: handlebars.TemplateDelegate;
+    private backupCodeUsedTemplate: handlebars.TemplateDelegate;
 
     constructor(
         private readonly configService: ConfigService,
@@ -78,6 +80,7 @@ export class MailService {
             this.confirmationTemplate = this.loadTemplate(path.join(templatesPath, 'confirmation.hbs'));
             this.passwordResetTemplate = this.loadTemplate(path.join(templatesPath, 'password-reset.hbs'));
             this.twoFactorAuthTemplate = this.loadTemplate(path.join(templatesPath, '2fa-code.hbs'));
+            this.backupCodeUsedTemplate = this.loadTemplate(path.join(templatesPath, 'backup-code-used.hbs'));
 
             this.logger.log('All email templates loaded successfully');
         } catch (error) {
@@ -446,53 +449,16 @@ export class MailService {
             const currentTime = new Date().toLocaleString();
             const ipAddress = 'Unknown'; // In a real implementation, you'd get this from the request context
             
-            const html = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="utf-8">
-                    <title>Backup Code Used - DentalFlow</title>
-                </head>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-                        <h2 style="color: #d32f2f;">⚠️ Security Alert</h2>
-                        <p>Hello ${user.first_name || user.email},</p>
-                        <p>We detected that a backup code was used to access your DentalFlow account.</p>
-                        
-                        <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                            <h3 style="margin-top: 0; color: #856404;">Account Access Details:</h3>
-                            <ul style="margin: 0; padding-left: 20px;">
-                                <li><strong>Time:</strong> ${currentTime}</li>
-                                <li><strong>IP Address:</strong> ${ipAddress}</li>
-                                <li><strong>Method:</strong> Backup Code</li>
-                            </ul>
-                        </div>
-                        
-                        <p><strong>If this was you:</strong></p>
-                        <ul>
-                            <li>No action is required</li>
-                            <li>Consider regenerating your backup codes for enhanced security</li>
-                            <li>Review your authenticator devices</li>
-                        </ul>
-                        
-                        <p><strong>If this wasn't you:</strong></p>
-                        <ul>
-                            <li>Change your password immediately</li>
-                            <li>Disable and re-enable 2FA</li>
-                            <li>Generate new backup codes</li>
-                            <li>Contact support if needed</li>
-                        </ul>
-                        
-                        <p>For your security, the used backup code has been invalidated and can no longer be used.</p>
-                        
-                        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
-                            <p>This is an automated security notification from DentalFlow.</p>
-                            <p>If you have any questions, please contact our support team.</p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `;
+            // Prepare template parameters
+            const templateParams: BackupCodeUsedTemplate = {
+                ...this.getCommonEmailParams(),
+                userName: user.first_name || user.email,
+                currentTime,
+                ipAddress
+            } as BackupCodeUsedTemplate;
+
+            // Generate HTML from template
+            const html = this.backupCodeUsedTemplate(templateParams);
 
             // Send email
             await this.sendEmail({

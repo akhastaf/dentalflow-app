@@ -27,6 +27,11 @@ import { EmailTokenService } from 'src/mail/email-token.service';
 import { MailService } from 'src/mail/mail.service';
 import { TwoFactorService } from './two-factor.service';
 import { UserService } from 'src/user/users.service';
+import { TenantService } from 'src/tenant/tenant.service';
+import { StaffService } from 'src/staff/staff.service';
+import { TenantResponseDto } from 'src/tenant/dtos/tenant-response.dto';
+import { StaffResponseDto } from 'src/staff/dtos/staff-response.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 
 interface TwoFactorRequiredResponse {
@@ -57,7 +62,9 @@ export class AuthController {
     private readonly twoFactorService: TwoFactorService,
     private readonly userService: UserService,
     private readonly mailService: MailService,
-    private readonly emailTokenService: EmailTokenService
+    private readonly emailTokenService: EmailTokenService,
+    private readonly tenantService: TenantService,
+    private readonly staffService: StaffService
   ) {}
 
   @Post('register')
@@ -455,8 +462,69 @@ export class AuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({ status: 200, description: 'User profile retrieved' })
-  async getProfile(@CurrentUser() user: User): Promise<User> {
-    return user;
+  async getProfile(@CurrentUser() user: User): Promise<UserResponseDto> {
+    return this.authService.transformUserToResponseDto(user);
+  }
+
+  @Get('tenant')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user\'s tenant information' })
+  @ApiResponse({ status: 200, description: 'Tenant information retrieved' })
+  @ApiResponse({ status: 404, description: 'Tenant not found' })
+  async getTenant(@CurrentUser() user: User): Promise<TenantResponseDto> {
+    const tenant = await this.tenantService.findByUserId(user.user_id);
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found for this user');
+    }
+    return tenant;
+  }
+
+  @Get('staff')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user\'s staff information' })
+  @ApiResponse({ status: 200, description: 'Staff information retrieved' })
+  @ApiResponse({ status: 404, description: 'Staff record not found' })
+  async getStaff(@CurrentUser() user: User): Promise<StaffResponseDto> {
+    const tenant = await this.tenantService.findByUserId(user.user_id);
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found for this user');
+    }
+    
+    const staff = await this.staffService.findByUserIdAndTenant(user.user_id, tenant.id);
+    if (!staff) {
+      throw new NotFoundException('Staff record not found for this user');
+    }
+    
+    return staff;
+  }
+
+  @Get('user-data')
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get complete user data including tenant and staff information' })
+  @ApiResponse({ status: 200, description: 'Complete user data retrieved' })
+  async getUserData(@CurrentUser() user: User): Promise<{
+    user: UserResponseDto;
+    tenant: TenantResponseDto;
+    staff: StaffResponseDto;
+  }> {
+    const tenant = await this.tenantService.findByUserId(user.user_id);
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found for this user');
+    }
+    
+    const staff = await this.staffService.findByUserIdAndTenant(user.user_id, tenant.id);
+    if (!staff) {
+      throw new NotFoundException('Staff record not found for this user');
+    }
+    
+    return {
+      user: this.authService.transformUserToResponseDto(user),
+      tenant,
+      staff
+    };
   }
 
   /**

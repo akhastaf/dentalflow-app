@@ -16,10 +16,11 @@ import { StaffRole, SalaryType } from 'src/staff/entities/staff.entity';
 import { Request } from 'express';
 import { EntityNotFoundError } from 'typeorm';
 import * as crypto from 'crypto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 export interface LoginResponse {
     accessToken: string | null;
-    user: User | null;
+    user: UserResponseDto | null;
     requires2FA?: boolean;
     twoFactorMethods?: {
         authenticator: boolean;
@@ -181,7 +182,7 @@ export class AuthService {
 
             return {
                 accessToken,
-                user
+                user: this.transformUserToResponseDto(user)
             };
 
         } catch (e) {
@@ -259,7 +260,7 @@ export class AuthService {
 
             return {
                 accessToken,
-                user
+                user: this.transformUserToResponseDto(user)
             };
         } catch (error) {
             console.error('2FA completion error in service:', error);
@@ -317,7 +318,7 @@ export class AuthService {
 
             return {
                 accessToken,
-                user
+                user: this.transformUserToResponseDto(user)
             };
 
         } catch (error) {
@@ -633,7 +634,23 @@ export class AuthService {
 
         return {
             accessToken,
-            user
+            user: this.transformUserToResponseDto(user)
+        };
+    }
+
+    public transformUserToResponseDto(user: User): UserResponseDto {
+        return {
+            user_id: user.user_id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            is_verified: user.is_verified,
+            is_active: user.is_active,
+            twoFactorAuthenticatorEnabled: user.twoFactorAuthenticatorEnabled,
+            twoFactorEmailEnabled: user.twoFactorEmailEnabled,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+
         };
     }
 }
