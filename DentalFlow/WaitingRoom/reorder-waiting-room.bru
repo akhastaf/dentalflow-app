@@ -1,0 +1,43 @@
+meta {
+  name: Reorder Waiting Room
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/waiting-room/{{waitingRoomId}}/reorder
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  [
+    {
+      "id": "{{waitingRoomId1}}",
+      "newOrder": 1
+    },
+    {
+      "id": "{{waitingRoomId2}}", 
+      "newOrder": 2
+    },
+    {
+      "id": "{{waitingRoomId3}}",
+      "newOrder": 3
+    }
+  ]
+}
+
+docs {
+  Reorder multiple waiting room entries at once.
+  
+  Provide an array of objects with:
+  - id: The waiting room entry ID
+  - newOrder: The new order number
+  
+  This is useful for drag-and-drop reordering in the UI.
+  All order numbers must be unique within the tenant.
+} 

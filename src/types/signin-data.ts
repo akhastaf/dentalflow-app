@@ -1,6 +1,6 @@
-import { User } from "src/user/entities/user.entity";
+import { UserResponseDto } from "src/auth/dto/user-response.dto";
 
 export interface SignInData {
     access_token: string,
-    user: User
+    user: UserResponseDto
 }

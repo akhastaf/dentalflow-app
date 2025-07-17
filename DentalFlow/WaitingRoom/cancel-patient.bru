@@ -1,0 +1,29 @@
+meta {
+  name: Cancel Patient
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/waiting-room/{{waitingRoomId}}/cancel
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "reason": "Patient requested to reschedule"
+  }
+}
+
+docs {
+  Cancel a patient from the waiting room. This changes the status to 'cancelled'.
+  
+  Cannot cancel a patient with 'completed' status.
+  A reason must be provided for the cancellation.
+  This action records who cancelled and when.
+} 

@@ -32,7 +32,6 @@ export class TenantService {
     email: string;
     address: string;
     city: string;
-    taxId?: string;
     ownerUserId: string;
   }): Promise<Tenant> {
     // Check if tenant with same slug or name already exists

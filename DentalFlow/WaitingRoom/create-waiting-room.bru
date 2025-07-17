@@ -1,0 +1,33 @@
+meta {
+  name: Create Waiting Room Entry
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/waiting-room
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "patientId": "{{patientId}}",
+    "assignedDoctorId": "{{doctorId}}",
+    "emergencyLevel": "normal",
+    "notes": "Patient has mild toothache"
+  }
+}
+
+docs {
+  Add a patient to the waiting room with optional doctor assignment and emergency level.
+  
+  Emergency levels:
+  - normal: Regular appointment
+  - urgent: Needs attention soon  
+  - emergency: Immediate attention required
+} 

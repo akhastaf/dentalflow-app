@@ -215,4 +215,9 @@ export class PatientService {
 
     return patient;
   }
+
+  async findById(id: string): Promise<Patient | undefined> {
+    const patient = await this.repo.findOne({ where: { id } });
+    return patient || undefined;
+  }
 }

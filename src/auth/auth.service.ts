@@ -14,13 +14,29 @@ import { TenantService } from 'src/tenant/tenant.service';
 import { StaffService } from 'src/staff/staff.service';
 import { StaffRole, SalaryType } from 'src/staff/entities/staff.entity';
 import { Request } from 'express';
+import { EntityNotFoundError } from 'typeorm';
 import * as crypto from 'crypto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 export interface LoginResponse {
     accessToken: string | null;
-    user: User | null;
+    user: UserResponseDto | null;
     requires2FA?: boolean;
-    twoFactorMethod?: TwoFactorMethod;
+    twoFactorMethods?: {
+        authenticator: boolean;
+        email: boolean;
+    };
+    preAuthToken?: string;
+}
+
+export interface PreAuthResponse {
+    twoFactorToken: string;
+    email: string;
+    twoFactorMethods: {
+        authenticator: boolean;
+        email: boolean;
+    };
+    expiresIn: number;
 }
 
 @Injectable()
@@ -48,7 +64,16 @@ export class AuthService {
         };
         
         console.log('Creating user with data:', userData);
-        const newUser: User|undefined = await this.userService.createWithBasicData(userData);
+        let newUser: User|undefined;
+        try {
+            newUser = await this.userService.createWithBasicData(userData);
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error; // Re-throw the specific email error
+            }
+            throw new BadRequestException('Failed to create user account');
+        }
+        
         if (!newUser) {
             throw new BadRequestException('Failed to create user account');
         }
@@ -62,7 +87,7 @@ export class AuthService {
             email: registerDto.email, // Use user's email as tenant email
             address: registerDto.tenantAddress,
             city: registerDto.tenantCity,
-            taxId: registerDto.tenantTaxId,
+    
             ownerUserId: newUser.user_id,
         };
 
@@ -126,12 +151,19 @@ export class AuthService {
             await this.recordSuccessfulLogin(user, request);
 
             // Check if 2FA is required
-            if (user.twoFactorEnabled && user.twoFactorMethod !== TwoFactorMethod.NONE) {
+            if (user.twoFactorAuthenticatorEnabled || user.twoFactorEmailEnabled) {
+                // Generate pre-auth token for 2FA
+                const preAuthToken = await this.generatePreAuthToken(user);
+                
                 return {
                     accessToken: null,
                     user: null,
                     requires2FA: true,
-                    twoFactorMethod: user.twoFactorMethod
+                    twoFactorMethods: {
+                        authenticator: user.twoFactorAuthenticatorEnabled,
+                        email: user.twoFactorEmailEnabled,
+                    },
+                    preAuthToken,
                 };
             }
 
@@ -150,57 +182,90 @@ export class AuthService {
 
             return {
                 accessToken,
-                user
+                user: this.transformUserToResponseDto(user)
             };
 
         } catch (e) {
-            if (e instanceof BadRequestException || e instanceof NotFoundException) {
+            if (e instanceof BadRequestException) {
                 throw e;
             } else if (e instanceof UnauthorizedException) {
                 throw e;
+            } else if (e instanceof NotFoundException) {
+                // Handle TypeORM EntityNotFoundError specifically
+                throw new BadRequestException('Invalid email or password');
             } else {
+                console.error('Login error:', e);
                 throw new InternalServerErrorException('Something went wrong');
             }
         }
     }
 
     /**
-     * Complete login with 2FA code
+     * Complete login with 2FA code (legacy method - uses email)
      */
     async completeLoginWith2FA(email: string, twoFactorCode: string, request?: Request): Promise<LoginResponse> {
-        const user = await this.userService.getUserByEmail(email);
-        
-        if (!user.twoFactorEnabled) {
-            throw new BadRequestException('2FA is not enabled for this account');
-        }
-
-        // Verify 2FA code
-        const is2FAValid = await this.twoFactorService.verify2FACode(user, twoFactorCode);
-        if (!is2FAValid) {
-            // Check if it's a backup code
-            const isBackupValid = await this.twoFactorService.verifyBackupCode(user, twoFactorCode);
-            if (!isBackupValid) {
-                throw new BadRequestException('Invalid 2FA code');
+        try {
+            console.log('2FA completion attempt for email:', email);
+            
+            const user = await this.userService.getUserByEmail(email);
+            if (!user) {
+                throw new BadRequestException('User not found');
             }
+            
+            return await this.complete2FAForUser(user, twoFactorCode, request);
+        } catch (error) {
+            console.error('2FA completion error:', error);
+            throw error;
         }
+    }
 
-        // Generate JWT token
-        const payload: JwtPayload = {
-            email: user.email,
-            sub: user.user_id
-        };
-        
-        const jwtSignOptions: JwtSignOptions = {
-            secret: this.configService.get('JWT_SECRET'),
-            expiresIn: this.configService.get('JWT_EXPIRATION'),
-        };
-        
-        const accessToken = this.jwtService.sign(payload, jwtSignOptions);
+    /**
+     * Complete 2FA for a user (new method - uses user object)
+     */
+    async complete2FAForUser(user: User, twoFactorCode: string, request?: Request): Promise<LoginResponse> {
+        try {
+            if (!user.twoFactorAuthenticatorEnabled && !user.twoFactorEmailEnabled) {
+                throw new BadRequestException('2FA is not enabled for this account');
+            }
 
-        return {
-            accessToken,
-            user
-        };
+            console.log('User found, 2FA enabled:', user.twoFactorAuthenticatorEnabled || user.twoFactorEmailEnabled);
+
+            // Verify 2FA code
+            const is2FAValid = await this.twoFactorService.verify2FACode(user, twoFactorCode);
+            if (!is2FAValid) {
+                // Check if it's a backup code
+                const isBackupValid = await this.twoFactorService.verifyBackupCode(user, twoFactorCode);
+                if (!isBackupValid) {
+                    throw new BadRequestException('Invalid 2FA code');
+                }
+            }
+
+            console.log('2FA code verified successfully');
+
+            // Generate JWT token
+            const payload: JwtPayload = {
+                email: user.email,
+                sub: user.user_id
+            };
+            
+            const jwtSignOptions: JwtSignOptions = {
+                secret: this.configService.get('JWT_SECRET'),
+                expiresIn: this.configService.get('JWT_EXPIRATION'),
+            };
+            
+            const accessToken = this.jwtService.sign(payload, jwtSignOptions);
+
+            // Record successful login
+            await this.recordSuccessfulLogin(user, request);
+
+            return {
+                accessToken,
+                user: this.transformUserToResponseDto(user)
+            };
+        } catch (error) {
+            console.error('2FA completion error in service:', error);
+            throw error;
+        }
     }
 
     /**
@@ -213,15 +278,15 @@ export class AuthService {
     /**
      * Verify 2FA setup
      */
-    async verify2FASetup(userId: string, code: string) {
-        return await this.twoFactorService.verify2FASetup(userId, code);
+    async verify2FASetup(userId: string, code: string, method: TwoFactorMethod) {
+        return await this.twoFactorService.verify2FASetup(userId, code, method);
     }
 
     /**
      * Disable 2FA
      */
-    async disable2FA(userId: string, code: string, password: string) {
-        return await this.twoFactorService.disable2FA(userId, code, password);
+    async disable2FA(userId: string, password: string, method: TwoFactorMethod) {
+        return await this.twoFactorService.disable2FA(userId, password, method);
     }
 
     /**
@@ -253,7 +318,7 @@ export class AuthService {
 
             return {
                 accessToken,
-                user
+                user: this.transformUserToResponseDto(user)
             };
 
         } catch (error) {
@@ -406,5 +471,185 @@ export class AuthService {
             }
             throw new InternalServerErrorException('Failed to reset password');
         }
+    }
+
+    /**
+     * Resend verification email
+     */
+    async resendVerification(email: string): Promise<{ message: string }> {
+        try {
+            const user = await this.findUserByEmail(email);
+            if (!user) {
+                throw new BadRequestException('User not found');
+            }
+
+            if (user.is_verified) {
+                throw new BadRequestException('User is already verified');
+            }
+
+            // Send confirmation email
+            this.mailService.sendUserConfirmation(user);
+            
+            return { message: 'Verification email sent successfully' };
+        } catch (error) {
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            throw new InternalServerErrorException('Failed to resend verification email');
+        }
+    }
+
+    /**
+     * Verify email with JWT token
+     */
+    async verifyEmail(token: string): Promise<{ message: string }> {
+        try {
+            console.log('Verifying email with token:', token);
+            
+            // Get the JWT secret for email verification
+            const jwtSecret = this.configService.get('JWT_EMAIL_VERIFICATION_SECRET');
+            if (!jwtSecret) {
+                console.error('JWT_EMAIL_VERIFICATION_SECRET is not configured');
+                throw new InternalServerErrorException('Email verification is not properly configured');
+            }
+            
+            console.log('Using JWT secret for verification');
+            
+            // Verify the JWT token
+            const payload = this.jwtService.verify(token, {
+                secret: jwtSecret
+            });
+            
+            console.log('JWT payload:', payload);
+
+            // Find user by email from token
+            const user = await this.findUserByEmail(payload.email);
+            if (!user) {
+                console.log('User not found for email:', payload.email);
+                throw new BadRequestException('User not found');
+            }
+
+            // Check if user is already verified
+            if (user.is_verified) {
+                console.log('User is already verified:', user.email);
+                throw new BadRequestException('User is already verified');
+            }
+
+            // Mark user as verified
+            await this.userService.verifyUser(user.user_id);
+            console.log('User verified successfully:', user.email);
+            
+            return { message: 'Email verified successfully' };
+        } catch (error) {
+            console.error('Email verification error:', error);
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+            if (error.name === 'TokenExpiredError') {
+                throw new BadRequestException('Verification token has expired');
+            }
+            if (error.name === 'JsonWebTokenError') {
+                throw new BadRequestException('Invalid verification token');
+            }
+            throw new InternalServerErrorException('Failed to verify email');
+        }
+    }
+
+    async send2FAEmailCode(user: User): Promise<void> {
+        await this.twoFactorService.send2FAEmailCode(user);
+    }
+
+    /**
+     * Generate pre-auth token for 2FA flow
+     */
+    private async generatePreAuthToken(user: User): Promise<string> {
+        const payload = {
+            sub: user.user_id,
+            email: user.email,
+            type: '2fa_preauth'
+        };
+        
+        const jwtSignOptions: JwtSignOptions = {
+            secret: this.configService.get('JWT_2FA_SECRET'),
+            expiresIn: '10m', // 10 minutes
+        };
+        
+        return this.jwtService.sign(payload, jwtSignOptions);
+    }
+
+    /**
+     * Verify pre-auth token
+     */
+    async verifyPreAuthToken(token: string): Promise<User | null> {
+        try {
+            const payload = this.jwtService.verify(token, {
+                secret: this.configService.get('JWT_2FA_SECRET'),
+            });
+            
+            if (payload.type !== '2fa_preauth') {
+                return null;
+            }
+            
+            return await this.userService.findById(payload.sub);
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Complete 2FA with backup code
+     */
+    async complete2FAWithBackupCode(token: string, backupCode: string, request?: Request): Promise<LoginResponse> {
+        const user = await this.verifyPreAuthToken(token);
+        if (!user) {
+            throw new UnauthorizedException('Invalid or expired 2FA token');
+        }
+
+        // Verify backup code
+        const isValidBackupCode = await this.twoFactorService.verifyBackupCode(user, backupCode);
+        if (!isValidBackupCode) {
+            throw new BadRequestException('Invalid backup code');
+        }
+
+        // Record successful login
+        await this.recordSuccessfulLogin(user, request);
+
+        // Generate final access token
+        const payload: JwtPayload = {
+            email: user.email,
+            sub: user.user_id
+        };
+        
+        const jwtSignOptions: JwtSignOptions = {
+            secret: this.configService.get('JWT_SECRET'),
+            expiresIn: this.configService.get('JWT_EXPIRATION'),
+        };
+        
+        const accessToken = this.jwtService.sign(payload, jwtSignOptions);
+
+        // JWT tokens are stateless, no need to clear from database
+
+        // Send security notification
+        await this.mailService.sendBackupCodeUsedNotification(user);
+
+        return {
+            accessToken,
+            user: this.transformUserToResponseDto(user)
+        };
+    }
+
+    public transformUserToResponseDto(user: User): UserResponseDto {
+        return {
+            user_id: user.user_id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            is_verified: user.is_verified,
+            is_active: user.is_active,
+            twoFactorAuthenticatorEnabled: user.twoFactorAuthenticatorEnabled,
+            twoFactorEmailEnabled: user.twoFactorEmailEnabled,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+        };
     }
 }

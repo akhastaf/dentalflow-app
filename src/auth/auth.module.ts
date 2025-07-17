@@ -8,6 +8,9 @@ import { TwoFactorService } from './two-factor.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TenantModule } from 'src/tenant/tenant.module';
 import { StaffModule } from 'src/staff/staff.module';
+import { AuthGuard } from './guards/auth.guard';
+import { RefreshTokenGuard } from './guards/refresh-token.guard';
+import { TwoFactorAuthGuard } from './guards/two-factor-auth.guard';
 
 @Module({
   imports: [
@@ -27,7 +30,7 @@ import { StaffModule } from 'src/staff/staff.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, TwoFactorService],
-  exports: [AuthService, TwoFactorService],
+  providers: [AuthService, TwoFactorService, AuthGuard, RefreshTokenGuard, TwoFactorAuthGuard],
+  exports: [AuthService, TwoFactorService, AuthGuard, RefreshTokenGuard, TwoFactorAuthGuard],
 })
 export class AuthModule {}
