@@ -30,4 +30,9 @@ export class UpdateTenantProfileDto {
   @IsOptional()
   city?: string;
 
+  @ApiPropertyOptional({ description: 'Tax ID (ICE)', example: '000123456789' })
+  @IsString()
+  @Length(9, 50)
+  @IsOptional()
+  taxId?: string;
 } 

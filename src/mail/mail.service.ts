@@ -8,7 +8,6 @@ import { JwtService, JwtSignOptions } from "@nestjs/jwt";
 import { ConfirmationTemplate } from "src/types/confirmation-template";
 import { PasswordResetTemplate } from "src/types/password-reset-template";
 import { TwoFactorAuthTemplate } from "src/types/2fa-template";
-import { BackupCodeUsedTemplate } from "src/types/backup-code-used-template";
 import { JwtPayload } from "src/types/jwt-payload";
 import { User } from "src/user/entities/user.entity";
 import { EmailTokenService } from "./email-token.service";
@@ -44,7 +43,6 @@ export class MailService {
     private confirmationTemplate: handlebars.TemplateDelegate;
     private passwordResetTemplate: handlebars.TemplateDelegate;
     private twoFactorAuthTemplate: handlebars.TemplateDelegate;
-    private backupCodeUsedTemplate: handlebars.TemplateDelegate;
 
     constructor(
         private readonly configService: ConfigService,
@@ -80,7 +78,6 @@ export class MailService {
             this.confirmationTemplate = this.loadTemplate(path.join(templatesPath, 'confirmation.hbs'));
             this.passwordResetTemplate = this.loadTemplate(path.join(templatesPath, 'password-reset.hbs'));
             this.twoFactorAuthTemplate = this.loadTemplate(path.join(templatesPath, '2fa-code.hbs'));
-            this.backupCodeUsedTemplate = this.loadTemplate(path.join(templatesPath, 'backup-code-used.hbs'));
 
             this.logger.log('All email templates loaded successfully');
         } catch (error) {
@@ -225,7 +222,7 @@ export class MailService {
         try {
             // Create database token for password reset
             const emailToken = await this.emailTokenService.createPasswordResetToken(user);
-            const resetLink = `${this.configService.get<string>("CLIENT_URL")}/auth/password/reset?token=${emailToken.token}`;
+            const resetLink = `${this.configService.get<string>("CLIENT_URL")}/auth/reset-password?token=${emailToken.token}`;
 
             // Prepare template parameters
             const templateParams: PasswordResetTemplate = {
@@ -430,46 +427,6 @@ export class MailService {
         } catch (error) {
             this.logger.error(`Failed to send custom email to ${to}:`, error);
             throw error;
-        }
-    }
-
-    /**
-     * Send backup code usage notification
-     * 
-     * Sends a security notification to users when their backup code is used
-     * to alert them of potentially unauthorized activity.
-     * 
-     * @param user - User entity containing email and user information
-     * @returns Promise that resolves when email is sent
-     */
-    async sendBackupCodeUsedNotification(user: User): Promise<void> {
-        this.logger.log(`Sending backup code usage notification to ${user.email}`);
-
-        try {
-            const currentTime = new Date().toLocaleString();
-            const ipAddress = 'Unknown'; // In a real implementation, you'd get this from the request context
-            
-            // Prepare template parameters
-            const templateParams: BackupCodeUsedTemplate = {
-                ...this.getCommonEmailParams(),
-                userName: user.first_name || user.email,
-                currentTime,
-                ipAddress
-            } as BackupCodeUsedTemplate;
-
-            // Generate HTML from template
-            const html = this.backupCodeUsedTemplate(templateParams);
-
-            // Send email
-            await this.sendEmail({
-                to: user.email,
-                subject: 'Security Alert: Backup Code Used - DentalFlow',
-                html
-            });
-
-        } catch (error) {
-            this.logger.error(`Failed to send backup code notification to ${user.email}:`, error);
-            // Don't throw error for notification failures to avoid breaking the login flow
         }
     }
 }
