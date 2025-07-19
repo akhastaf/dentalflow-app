@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deactivation - DentalFlow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .deactivation-header {
+            color: #dc2626;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .details-box {
+            background-color: #fef2f2;
+            border: 1px solid #fecaca;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .details-title {
+            margin-top: 0;
+            color: #991b1b;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .details-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .details-list li {
+            margin-bottom: 8px;
+            color: #7f1d1d;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .contact-info {
+            background-color: #f0f9ff;
+            border: 1px solid #bae6fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .contact-title {
+            margin-top: 0;
+            color: #0c4a6e;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {{#if companyLogo}}
+            <img src="{{companyLogo}}" alt="{{companyName}}" class="logo">
+            {{/if}}
+        </div>
+        
+        <div class="content">
+            <h2 class="deactivation-header">⚠️ Account Deactivation Notice</h2>
+            
+            <p>Hello {{userName}},</p>
+            
+            <p>We regret to inform you that your staff account at <strong>{{clinicName}}</strong> has been deactivated by the clinic administrator.</p>
+            
+            <div class="details-box">
+                <h3 class="details-title">Account Details:</h3>
+                <ul class="details-list">
+                    <li><strong>Clinic:</strong> {{clinicName}}</li>
+                    <li><strong>Role:</strong> {{role}}</li>
+                    <li><strong>Deactivated by:</strong> {{deactivatedBy}}</li>
+                    <li><strong>Deactivation Date:</strong> {{deactivationDate}}</li>
+                </ul>
+            </div>
+            
+            <div class="warning">
+                <strong>Important:</strong> As of this deactivation, you will no longer be able to access the clinic's patient management system or any associated services.
+            </div>
+            
+            <p>This means:</p>
+            <ul>
+                <li>You cannot log in to the DentalFlow system for this clinic</li>
+                <li>Your access to patient records and appointments has been revoked</li>
+                <li>You will no longer receive notifications from this clinic</li>
+                <li>Any pending tasks or responsibilities have been reassigned</li>
+            </ul>
+            
+            {{#if contactEmail}}
+            <div class="contact-info">
+                <h4 class="contact-title">Need to Contact the Clinic?</h4>
+                <p>If you have any questions about this deactivation or need to discuss your account status, please contact the clinic directly:</p>
+                {{#if contactEmail}}
+                <p><strong>Email:</strong> <a href="mailto:{{contactEmail}}">{{contactEmail}}</a></p>
+                {{/if}}
+                {{#if contactPhone}}
+                <p><strong>Phone:</strong> {{contactPhone}}</p>
+                {{/if}}
+            </div>
+            {{/if}}
+            
+            <p>If you believe this deactivation was made in error, please contact the clinic administrator immediately.</p>
+            
+            <p>Thank you for your service at {{clinicName}}.</p>
+            
+            <p>Best regards,<br>
+            The {{companyName}} Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p>{{companyAddress}}</p>
+            {{#if unsubscribeLink}}
+            <p><a href="{{unsubscribeLink}}">Unsubscribe</a></p>
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html> 

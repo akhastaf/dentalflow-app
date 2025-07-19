@@ -22,13 +22,17 @@ import { FilterStaffDto } from './dtos/filter-staff.dto';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { Staff } from './entities/staff.entity';
 import { RequestWithUser } from '../types/request-with-user';
+import { UserService } from '../user/users.service';
 
 @ApiTags('Staff')
 @Controller('staff')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
 export class StaffController {
-  constructor(private readonly staffService: StaffService) {}
+  constructor(
+    private readonly staffService: StaffService,
+    private readonly userService: UserService
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new staff member (assign existing user)' })
@@ -66,6 +70,7 @@ export class StaffController {
     @Body() createStaffWithUserDto: CreateStaffWithUserDto,
     @Request() req: RequestWithUser
   ): Promise<{ staff: Staff; user: any }> {
+    console.log('staff ', createStaffWithUserDto);
     const tenantId = await this.getTenantIdFromUser(req.user.user_id);
     return this.staffService.createWithUser(createStaffWithUserDto, tenantId);
   }
@@ -195,6 +200,38 @@ export class StaffController {
     return this.staffService.restoreStaff(id, tenantId);
   }
 
+  @Post('activate')
+  @ApiOperation({ summary: 'Activate staff member account with invitation token' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Staff member activated successfully',
+    type: Staff 
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired token' })
+  @ApiResponse({ status: 404, description: 'Staff member not found' })
+  async activateStaff(
+    @Body() activateStaffDto: { token: string; password: string },
+    @Request() req: RequestWithUser
+  ): Promise<{ staff: Staff; user: any }> {
+    return this.staffService.activateStaff(activateStaffDto.token, activateStaffDto.password);
+  }
+
+  @Post(':id/resend-invitation')
+  @ApiOperation({ summary: 'Resend invitation email to staff member' })
+  @ApiParam({ name: 'id', description: 'Staff UUID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Invitation email sent successfully'
+  })
+  @ApiResponse({ status: 404, description: 'Staff member not found' })
+  async resendInvitation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Request() req: RequestWithUser
+  ): Promise<{ message: string }> {
+    const tenantId = await this.getTenantIdFromUser(req.user.user_id);
+    return this.staffService.resendInvitation(id, tenantId);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a staff member (soft delete)' })
@@ -206,7 +243,12 @@ export class StaffController {
     @Request() req: RequestWithUser
   ): Promise<void> {
     const tenantId = await this.getTenantIdFromUser(req.user.user_id);
-    return this.staffService.remove(id, tenantId);
+    
+    // Get the current user's name for the deactivation email
+    const currentUser = await this.userService.findById(req.user.user_id);
+    const deactivatedBy = currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : 'Clinic Administrator';
+    
+    return this.staffService.remove(id, tenantId, deactivatedBy);
   }
 
   @Delete(':id/permanent')

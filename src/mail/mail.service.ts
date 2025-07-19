@@ -9,6 +9,8 @@ import { ConfirmationTemplate } from "src/types/confirmation-template";
 import { PasswordResetTemplate } from "src/types/password-reset-template";
 import { TwoFactorAuthTemplate } from "src/types/2fa-template";
 import { BackupCodeUsedTemplate } from "src/types/backup-code-used-template";
+import { StaffInvitationTemplate } from "src/types/staff-invitation-template";
+import { StaffDeactivationTemplate } from "src/types/staff-deactivation-template";
 import { JwtPayload } from "src/types/jwt-payload";
 import { User } from "src/user/entities/user.entity";
 import { EmailTokenService } from "./email-token.service";
@@ -45,6 +47,8 @@ export class MailService {
     private passwordResetTemplate: handlebars.TemplateDelegate;
     private twoFactorAuthTemplate: handlebars.TemplateDelegate;
     private backupCodeUsedTemplate: handlebars.TemplateDelegate;
+    private staffInvitationTemplate: handlebars.TemplateDelegate;
+    private staffDeactivationTemplate: handlebars.TemplateDelegate;
 
     constructor(
         private readonly configService: ConfigService,
@@ -81,6 +85,8 @@ export class MailService {
             this.passwordResetTemplate = this.loadTemplate(path.join(templatesPath, 'password-reset.hbs'));
             this.twoFactorAuthTemplate = this.loadTemplate(path.join(templatesPath, '2fa-code.hbs'));
             this.backupCodeUsedTemplate = this.loadTemplate(path.join(templatesPath, 'backup-code-used.hbs'));
+            this.staffInvitationTemplate = this.loadTemplate(path.join(templatesPath, 'staff-invitation.hbs'));
+            this.staffDeactivationTemplate = this.loadTemplate(path.join(templatesPath, 'staff-deactivation.hbs'));
 
             this.logger.log('All email templates loaded successfully');
         } catch (error) {
@@ -132,10 +138,11 @@ export class MailService {
         html: string;
     }): Promise<void> {
         const fromEmail = this.configService.get<string>("DEFAULT_EMAIL") || 'noreply@dentistflow.com';
+        const emailName = this.configService.get<string>("EMAIL_NAME") || 'DentalFlow';
         
         try {
             const { data } = await this.resend.emails.send({
-                from: `Abderrzzaq <${fromEmail}>`,
+                from: `${emailName} <${fromEmail}>`,
                 to: emailData.to,
                 subject: emailData.subject,
                 html: emailData.html,
@@ -470,6 +477,136 @@ export class MailService {
         } catch (error) {
             this.logger.error(`Failed to send backup code notification to ${user.email}:`, error);
             // Don't throw error for notification failures to avoid breaking the login flow
+        }
+    }
+
+    /**
+     * Send staff invitation email
+     * 
+     * Sends an invitation email to new staff members with an activation link
+     * that allows them to create their password and activate their account.
+     * 
+     * @param user - User entity containing email and first_name
+     * @param staffData - Staff invitation data including role and clinic info
+     * @param activationToken - Token for account activation
+     * @returns Promise that resolves when email is sent
+     * 
+     * @example
+     * ```typescript
+     * const token = await emailTokenService.createStaffInvitationToken(user);
+     * await mailService.sendStaffInvitation(user, staffData, token.token);
+     * ```
+     */
+    async sendStaffInvitation(
+        user: User, 
+        staffData: {
+            role: string;
+            clinicName: string;
+            invitedBy: string;
+        },
+        activationToken: string
+    ): Promise<void> {
+        this.logger.log(`Sending staff invitation email to ${user.email}`);
+
+        try {
+            const activationLink = `${this.configService.get<string>("CLIENT_URL")}/auth/staff-activation?token=${activationToken}`;
+            const invitationDate = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Prepare template parameters
+            const templateParams: StaffInvitationTemplate = {
+                ...this.getCommonEmailParams(),
+                userName: user.first_name || user.email,
+                clinicName: staffData.clinicName,
+                role: staffData.role,
+                invitedBy: staffData.invitedBy,
+                invitationDate,
+                activationLink,
+                expiryTime: '24 hours'
+            } as StaffInvitationTemplate;
+
+            // Generate HTML from template
+            const html = this.staffInvitationTemplate(templateParams);
+
+            // Send email
+            await this.sendEmail({
+                to: user.email,
+                subject: `You're Invited to Join ${staffData.clinicName} on DentalFlow`,
+                html
+            });
+
+        } catch (error) {
+            this.logger.error(`Failed to send staff invitation email to ${user.email}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Send staff deactivation email
+     * 
+     * Sends a deactivation notification email to staff members when their account
+     * is deactivated by an administrator.
+     * 
+     * @param user - User entity containing email and first_name
+     * @param staffData - Staff deactivation data including role and clinic info
+     * @returns Promise that resolves when email is sent
+     * 
+     * @example
+     * ```typescript
+     * await mailService.sendStaffDeactivation(user, {
+     *   role: 'doctor',
+     *   clinicName: 'Dental Clinic',
+     *   deactivatedBy: 'Admin User'
+     * });
+     * ```
+     */
+    async sendStaffDeactivation(
+        user: User, 
+        staffData: {
+            role: string;
+            clinicName: string;
+            deactivatedBy: string;
+            contactEmail?: string;
+            contactPhone?: string;
+        }
+    ): Promise<void> {
+        this.logger.log(`Sending staff deactivation email to ${user.email}`);
+
+        try {
+            const deactivationDate = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Prepare template parameters
+            const templateParams: StaffDeactivationTemplate = {
+                ...this.getCommonEmailParams(),
+                userName: user.first_name || user.email,
+                clinicName: staffData.clinicName,
+                role: staffData.role,
+                deactivatedBy: staffData.deactivatedBy,
+                deactivationDate,
+                contactEmail: staffData.contactEmail,
+                contactPhone: staffData.contactPhone
+            } as StaffDeactivationTemplate;
+
+            // Generate HTML from template
+            const html = this.staffDeactivationTemplate(templateParams);
+
+            // Send email
+            await this.sendEmail({
+                to: user.email,
+                subject: `Account Deactivation Notice - ${staffData.clinicName}`,
+                html
+            });
+
+        } catch (error) {
+            this.logger.error(`Failed to send staff deactivation email to ${user.email}:`, error);
+            throw error;
         }
     }
 }

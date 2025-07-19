@@ -147,6 +147,12 @@ export class AuthService {
                 throw new BadRequestException('Account is deactivated');
             }
 
+            // Check if user belongs to any active tenant (not deactivated staff)
+            const activeStaff = await this.staffService.findActiveStaffByUserId(user.user_id);
+            if (!activeStaff) {
+                throw new BadRequestException('You do not belong to any active clinic. Please contact your administrator.');
+            }
+
             // Record successful login
             await this.recordSuccessfulLogin(user, request);
 

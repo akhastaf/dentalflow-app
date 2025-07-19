@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsEnum, IsArray, IsNumber, IsOptional, IsEmail, Min, Max, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
 import { StaffRole, SalaryType } from '../entities/staff.entity';
 
 export class CreateStaffWithUserDto {
@@ -40,11 +41,12 @@ export class CreateStaffWithUserDto {
 
   @ApiProperty({ 
     example: 5000.00, 
-    description: 'Salary amount (fixed amount or percentage base)',
+    description: 'Salary amount in MAD (Moroccan Dirham) - fixed amount or percentage base',
     minimum: 0
   })
-  @IsNumber()
-  @Min(0)
+  @Type(() => Number)
+  @IsNumber({}, { message: 'salaryAmount must be a number' })
+  @Min(0, { message: 'salaryAmount must not be less than 0' })
   salaryAmount: number;
 
   @ApiPropertyOptional({ 
