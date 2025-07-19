@@ -26,7 +26,7 @@ export class StaffResponseDto {
   @ApiProperty({ enum: SalaryType, example: SalaryType.FIXED, description: 'Type of salary calculation' })
   salaryType: SalaryType;
 
-  @ApiProperty({ example: 5000.00, description: 'Salary amount' })
+  @ApiProperty({ example: 5000.00, description: 'Salary amount in MAD (Moroccan Dirham)' })
   salaryAmount: number;
 
   @ApiProperty({ example: '2024-01-01T00:00:00.000Z', description: 'Staff record creation timestamp' })

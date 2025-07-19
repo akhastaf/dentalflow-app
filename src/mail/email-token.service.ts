@@ -99,6 +99,41 @@ export class EmailTokenService {
     }
 
     /**
+     * Create a new email token for staff invitation
+     * @param user - The user being invited as staff
+     * @returns The created email token
+     */
+    async createStaffInvitationToken(user: User): Promise<EmailToken> {
+        // Invalidate any existing invitation tokens for this user
+        await this.emailTokenRepository.update(
+            { 
+                userId: user.user_id, 
+                type: EmailTokenType.STAFF_INVITATION,
+                used: false 
+            },
+            { used: true }
+        );
+
+        // Create new token
+        const token = this.generateToken();
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours expiration
+
+        const emailToken = this.emailTokenRepository.create({
+            token,
+            type: EmailTokenType.STAFF_INVITATION,
+            userId: user.user_id,
+            expiresAt,
+            used: false
+        });
+
+        const savedToken = await this.emailTokenRepository.save(emailToken);
+        this.logger.log(`Created staff invitation token for user ${user.email}`);
+        
+        return savedToken;
+    }
+
+    /**
      * Validate and retrieve a token
      * @param token - The token to validate
      * @param type - The expected token type
@@ -124,24 +159,26 @@ export class EmailTokenService {
     }
 
     /**
-     * Mark a token as used
-     * @param token - The token to mark as used
-     * @returns True if successful, false otherwise
+     * Find email token by token string and type
+     * @param token - The token string to find
+     * @param type - The type of token to find
+     * @returns The email token or null if not found
      */
-    async markTokenAsUsed(token: string): Promise<boolean> {
-        const emailToken = await this.emailTokenRepository.findOne({
-            where: { token }
+    async findByToken(token: string, type: EmailTokenType): Promise<EmailToken | null> {
+        return await this.emailTokenRepository.findOne({
+            where: { token, type, used: false }
         });
+    }
 
-        if (!emailToken) {
-            return false;
-        }
-
-        emailToken.markAsUsed();
-        await this.emailTokenRepository.save(emailToken);
-        
-        this.logger.log(`Marked token as used: ${token}`);
-        return true;
+    /**
+     * Mark a token as used
+     * @param token - The token string to mark as used
+     */
+    async markTokenAsUsed(token: string): Promise<void> {
+        await this.emailTokenRepository.update(
+            { token },
+            { used: true, usedAt: new Date() }
+        );
     }
 
     /**

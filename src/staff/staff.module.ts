@@ -11,9 +11,17 @@ import { StaffTimeRange } from './entities/staff-time-range.entity';
 import { Appointment } from '../appointment/entities/appointment.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from 'src/user/users.module';
+import { MailModule } from '../mail/mail.module';
+import { TenantModule } from '../tenant/tenant.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Staff, StaffTimeRange, Appointment]), JwtModule, UsersModule],
+  imports: [
+    TypeOrmModule.forFeature([Staff, StaffTimeRange, Appointment]), 
+    JwtModule, 
+    UsersModule,
+    MailModule,
+    TenantModule
+  ],
   controllers: [StaffController, StaffTimeRangeController, StaffAvailabilityController],
   providers: [StaffService, StaffTimeRangeService, StaffAvailabilityService],
   exports: [StaffService, StaffTimeRangeService, StaffAvailabilityService]

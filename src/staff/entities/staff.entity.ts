@@ -27,6 +27,12 @@ export enum SalaryType {
   PERCENTAGE = 'percentage',
 }
 
+export enum StaffStatus {
+  PENDING = 'pending',
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}
+
 @Entity('staff')
 @Index('idx_staff_tenant_id', ['tenantId'])
 @Index(['tenantId', 'userId'], { unique: true }) // one staff config per user per tenant
@@ -65,6 +71,9 @@ export class Staff {
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   salaryAmount: number;
+
+  @Column({ type: 'enum', enum: StaffStatus, default: StaffStatus.PENDING })
+  status: StaffStatus;
 
   @CreateDateColumn()
   createdAt: Date;

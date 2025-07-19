@@ -3,7 +3,8 @@ import { User } from '../../user/entities/user.entity';
 
 export enum EmailTokenType {
     PASSWORD_RESET = 'PASSWORD_RESET',
-    EMAIL_CONFIRMATION = 'EMAIL_CONFIRMATION'
+    EMAIL_CONFIRMATION = 'EMAIL_CONFIRMATION',
+    STAFF_INVITATION = 'STAFF_INVITATION'
 }
 
 @Entity('email_tokens')

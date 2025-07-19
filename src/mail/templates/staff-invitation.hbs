@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Invitation - DentalFlow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+        .content {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .invitation-header {
+            color: #2563eb;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .details-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .details-title {
+            margin-top: 0;
+            color: #1e293b;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .details-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .details-list li {
+            margin-bottom: 8px;
+            color: #475569;
+        }
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: #2563eb;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 16px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #1d4ed8;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #666666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {{#if companyLogo}}
+            <img src="{{companyLogo}}" alt="{{companyName}}" class="logo">
+            {{/if}}
+        </div>
+        
+        <div class="content">
+            <h2 class="invitation-header">🎉 You're Invited to Join DentalFlow!</h2>
+            
+            <p>Hello {{userName}},</p>
+            
+            <p>You have been invited to join <strong>{{clinicName}}</strong> as a staff member on the DentalFlow platform.</p>
+            
+            <div class="details-box">
+                <h3 class="details-title">Your Role Details:</h3>
+                <ul class="details-list">
+                    <li><strong>Role:</strong> {{role}}</li>
+                    <li><strong>Clinic:</strong> {{clinicName}}</li>
+                    <li><strong>Invited by:</strong> {{invitedBy}}</li>
+                    <li><strong>Invitation Date:</strong> {{invitationDate}}</li>
+                </ul>
+            </div>
+            
+            <p>To get started, you'll need to create your account and set up your password. Click the button below to begin:</p>
+            
+            <div style="text-align: center;">
+                <a href="{{activationLink}}" class="button">Activate Your Account</a>
+            </div>
+            
+            <p>If the button doesn't work, you can also copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #2563eb;">{{activationLink}}</p>
+            
+            <div class="warning">
+                <strong>Important:</strong> This invitation link will expire in {{expiryTime}} for security reasons. Please activate your account as soon as possible.
+            </div>
+            
+            <p>Once you activate your account, you'll be able to:</p>
+            <ul>
+                <li>Access the clinic's patient management system</li>
+                <li>Manage appointments and schedules</li>
+                <li>View and update patient records</li>
+                <li>Collaborate with other staff members</li>
+            </ul>
+            
+            <p>If you have any questions or need assistance, please contact your clinic administrator.</p>
+            
+            <p>Welcome to the team!<br>
+            The {{companyName}} Team</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{currentYear}} {{companyName}}. All rights reserved.</p>
+            <p>{{companyAddress}}</p>
+            {{#if unsubscribeLink}}
+            <p><a href="{{unsubscribeLink}}">Unsubscribe</a></p>
+            {{/if}}
+        </div>
+    </div>
+</body>
+</html> 
