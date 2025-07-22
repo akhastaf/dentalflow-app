@@ -49,6 +49,7 @@ export class ExpenseService {
       expenseDate: new Date(dto.expenseDate),
       paidAt: dto.paidAt ? new Date(dto.paidAt) : undefined,
       recurrenceEndDate: dto.recurrenceEndDate ? new Date(dto.recurrenceEndDate) : undefined,
+      attachmentPath: dto.attachmentPath || undefined,
     });
 
     return await this.expenseRepo.save(expense);
@@ -95,7 +96,14 @@ export class ExpenseService {
 
     // Handle date range
     if (filters.dateFrom && filters.dateTo) {
-      where.expenseDate = Between(new Date(filters.dateFrom), new Date(filters.dateTo));
+      // Create start and end dates with proper time boundaries
+      const startDate = new Date(filters.dateFrom);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(filters.dateTo);
+      endDate.setHours(23, 59, 59, 999);
+      
+      where.expenseDate = Between(startDate, endDate);
     }
 
     const query = this.expenseRepo.createQueryBuilder('expense')
@@ -124,6 +132,9 @@ export class ExpenseService {
   // 🛠️ UPDATE
   async update(id: string, dto: UpdateExpenseDto): Promise<Expense> {
     const expense = await this.findById(id);
+    
+    console.log('Update DTO:', dto);
+    console.log('Before update - attachmentPath:', expense.attachmentPath);
     
     // Validate that paid amount doesn't exceed total amount
     if (dto.amountPaid && dto.totalAmount && dto.amountPaid > dto.totalAmount) {
@@ -164,7 +175,11 @@ export class ExpenseService {
     }
 
     Object.assign(expense, dto);
-    return await this.expenseRepo.save(expense);
+    const savedExpense = await this.expenseRepo.save(expense);
+    
+    console.log('After update - attachmentPath:', savedExpense.attachmentPath);
+    
+    return savedExpense;
   }
 
   // 💰 GET EXPENSE STATISTICS
@@ -319,5 +334,15 @@ export class ExpenseService {
       { value: RecurrenceFrequency.MONTHLY, label: 'Monthly' },
       { value: RecurrenceFrequency.YEARLY, label: 'Yearly' },
     ];
+  }
+
+  // 🗑️ CLEAR ATTACHMENT PATH
+  async clearAttachmentPath(id: string): Promise<void> {
+    await this.expenseRepo
+      .createQueryBuilder()
+      .update(Expense)
+      .set({ attachmentPath: undefined })
+      .where('id = :id', { id })
+      .execute();
   }
 }

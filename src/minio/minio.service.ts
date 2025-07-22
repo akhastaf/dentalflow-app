@@ -1,12 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, HeadBucketCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'stream';
 import { FileProcessingService, FileInfo, ImageVersions } from './file-processing.service';
 
 @Injectable()
-export class MinioService {
+export class MinioService implements OnModuleInit {
   private readonly logger = new Logger(MinioService.name);
   private readonly s3Client: S3Client;
   private readonly bucketName: string;
@@ -26,22 +26,36 @@ export class MinioService {
       },
       forcePathStyle: true, // Required for MinIO
     });
+  }
 
-    this.initializeBucket();
+  async onModuleInit() {
+    await this.initializeBucket();
   }
 
   private async initializeBucket(): Promise<void> {
     try {
       // Check if bucket exists
-      await this.s3Client.send(new HeadObjectCommand({
+      await this.s3Client.send(new HeadBucketCommand({
         Bucket: this.bucketName,
-        Key: 'test'
       }));
-    } catch (error) {
+      this.logger.log(`Bucket ${this.bucketName} already exists`);
+    } catch (error: any) {
       // Bucket doesn't exist, create it
-      this.logger.log(`Creating bucket: ${this.bucketName}`);
-      // Note: In a real implementation, you'd use CreateBucketCommand
-      // For now, we'll assume the bucket exists or will be created by MinIO
+      if (error.name === 'NoSuchBucket' || error.$metadata?.httpStatusCode === 404) {
+        this.logger.log(`Creating bucket: ${this.bucketName}`);
+        try {
+          await this.s3Client.send(new CreateBucketCommand({
+            Bucket: this.bucketName,
+          }));
+          this.logger.log(`Bucket ${this.bucketName} created successfully`);
+        } catch (createError) {
+          this.logger.error(`Failed to create bucket ${this.bucketName}:`, createError);
+          throw createError;
+        }
+      } else {
+        this.logger.error(`Error checking bucket ${this.bucketName}:`, error);
+        throw error;
+      }
     }
   }
 
@@ -109,6 +123,43 @@ export class MinioService {
       this.logger.log(`File deleted successfully: ${key}`);
     } catch (error) {
       this.logger.error(`Failed to delete file ${key}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteFileWithVersions(key: string): Promise<void> {
+    try {
+      // First, get file info to check if it's an image with versions
+      const fileInfo = await this.getFileInfo(key);
+      
+      if (fileInfo.exists && fileInfo.urls) {
+        // Delete all image versions
+        const deletePromises: Promise<void>[] = [];
+        
+        if (fileInfo.urls.thumbnail) {
+          deletePromises.push(this.deleteFile(fileInfo.urls.thumbnail));
+        }
+        if (fileInfo.urls.small) {
+          deletePromises.push(this.deleteFile(fileInfo.urls.small));
+        }
+        if (fileInfo.urls.medium) {
+          deletePromises.push(this.deleteFile(fileInfo.urls.medium));
+        }
+        if (fileInfo.urls.large) {
+          deletePromises.push(this.deleteFile(fileInfo.urls.large));
+        }
+        if (fileInfo.urls.original) {
+          deletePromises.push(this.deleteFile(fileInfo.urls.original));
+        }
+        
+        await Promise.all(deletePromises);
+        this.logger.log(`All versions of file deleted successfully: ${key}`);
+      } else {
+        // If no versions found, just delete the original file
+        await this.deleteFile(key);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to delete file with versions ${key}:`, error);
       throw error;
     }
   }
@@ -356,7 +407,7 @@ export class MinioService {
       large?: string;
       original: string;
     } = {
-      original: this.getFileUrl(key)
+      original: key // Return file key instead of full URL
     };
 
     // Check if image versions exist
@@ -366,16 +417,16 @@ export class MinioService {
     const largeKey = `${folder}/large/${filename}`;
 
     if (await this.fileExists(thumbnailKey)) {
-      urls.thumbnail = this.getFileUrl(thumbnailKey);
+      urls.thumbnail = thumbnailKey; // Return file key instead of full URL
     }
     if (await this.fileExists(smallKey)) {
-      urls.small = this.getFileUrl(smallKey);
+      urls.small = smallKey; // Return file key instead of full URL
     }
     if (await this.fileExists(mediumKey)) {
-      urls.medium = this.getFileUrl(mediumKey);
+      urls.medium = mediumKey; // Return file key instead of full URL
     }
     if (await this.fileExists(largeKey)) {
-      urls.large = this.getFileUrl(largeKey);
+      urls.large = largeKey; // Return file key instead of full URL
     }
 
     return {
