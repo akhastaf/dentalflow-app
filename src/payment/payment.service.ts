@@ -36,23 +36,36 @@ export class PaymentService {
       throw new BadRequestException('Payment amount must match the sum of treatment payments');
     }
 
-    const payment = this.paymentRepo.create({
-      patientId: dto.patientId,
-      tenantId: dto.tenantId,
-      amount: dto.amount,
-      isPartial: dto.isPartial || false,
-      status: dto.status || PaymentStatus.COMPLETED,
-      paymentMethod: dto.paymentMethod,
-      reference: dto.reference,
-      note: dto.note,
+    // Use transaction to ensure all updates are committed together
+    return await this.paymentRepo.manager.transaction(async (entityManager) => {
+      const payment = entityManager.create(Payment, {
+        patientId: dto.patientId,
+        tenantId: dto.tenantId,
+        amount: dto.amount,
+        isPartial: dto.isPartial || false,
+        status: dto.status || PaymentStatus.COMPLETED,
+        paymentMethod: dto.paymentMethod,
+        reference: dto.reference,
+        note: dto.note,
+      });
+
+      const savedPayment = await entityManager.save(payment);
+
+      // Create payment treatment records and update treatment amounts within transaction
+      await this.createPaymentTreatmentsInTransaction(entityManager, savedPayment.id, dto.paymentTreatments);
+
+      // Fetch the complete payment with relations within the transaction
+      const completePayment = await entityManager.findOne(Payment, {
+        where: { id: savedPayment.id },
+        relations: ['patient', 'tenant', 'paymentTreatments', 'paymentTreatments.treatment']
+      });
+
+      if (!completePayment) {
+        throw new NotFoundException('Payment not found after creation');
+      }
+
+      return completePayment;
     });
-
-    const savedPayment = await this.paymentRepo.save(payment);
-
-    // Create payment treatment records
-    await this.createPaymentTreatments(savedPayment.id, dto.paymentTreatments);
-
-    return await this.findById(savedPayment.id);
   }
 
   // 💰 CREATE PAYMENT TREATMENTS
@@ -90,19 +103,125 @@ export class PaymentService {
       );
 
       // Update treatment's paid amount
-      treatment.amountPaid += ptDto.amountPaid;
+      const oldAmountPaid = Number(treatment.amountPaid) || 0;
+      const newAmountPaid = oldAmountPaid + Number(ptDto.amountPaid);
+      treatment.amountPaid = newAmountPaid;
       
-      // Update treatment status to completed if fully paid
+      // Update treatment status based on payment progress
       if (treatment.amountPaid >= treatment.amount) {
         treatment.status = TreatmentStatus.COMPLETED;
+      } else if (treatment.amountPaid > 0) {
+        treatment.status = TreatmentStatus.IN_PROGRESS;
       }
 
-      await this.treatmentRepo.save(treatment);
+      // Save the updated treatment
+      const savedTreatment = await this.treatmentRepo.save(treatment);
+      
+      // Log for debugging
+      console.log(`Treatment ${treatment.id} updated: amountPaid ${oldAmountPaid} -> ${savedTreatment.amountPaid}, status: ${savedTreatment.status}`);
     }
 
     // Save all payment treatment records
     if (paymentTreatmentEntities.length > 0) {
       await this.paymentTreatmentRepo.save(paymentTreatmentEntities);
+    }
+  }
+
+  // 💰 CREATE PAYMENT TREATMENTS (Transaction version)
+  private async createPaymentTreatmentsInTransaction(
+    entityManager: any,
+    paymentId: string, 
+    paymentTreatments: PaymentTreatmentDto[]
+  ): Promise<void> {
+    const paymentTreatmentEntities: PaymentTreatment[] = [];
+
+    for (const ptDto of paymentTreatments) {
+      // Verify treatment exists and belongs to the same patient
+      const treatment = await entityManager.findOne(Treatment, {
+        where: { id: ptDto.treatmentId }
+      });
+
+      if (!treatment) {
+        throw new NotFoundException(`Treatment with ID ${ptDto.treatmentId} not found`);
+      }
+
+      // Check if payment amount is valid (not exceeding remaining amount)
+      const remainingAmount = treatment.amount - treatment.amountPaid;
+      if (ptDto.amountPaid > remainingAmount) {
+        throw new BadRequestException(
+          `Payment amount ${ptDto.amountPaid} exceeds remaining amount ${remainingAmount} for treatment ${ptDto.treatmentId}`
+        );
+      }
+
+      // Create payment treatment record
+      paymentTreatmentEntities.push(
+        entityManager.create(PaymentTreatment, {
+          paymentId,
+          treatmentId: ptDto.treatmentId,
+          amountPaid: ptDto.amountPaid,
+        })
+      );
+
+      // Update treatment's paid amount
+      const oldAmountPaid = Number(treatment.amountPaid) || 0;
+      const newAmountPaid = oldAmountPaid + Number(ptDto.amountPaid);
+      treatment.amountPaid = newAmountPaid;
+      
+      // Update treatment status based on payment progress
+      if (treatment.amountPaid >= treatment.amount) {
+        treatment.status = TreatmentStatus.COMPLETED;
+      } else if (treatment.amountPaid > 0) {
+        treatment.status = TreatmentStatus.IN_PROGRESS;
+      }
+
+      // Save the updated treatment within transaction
+      const savedTreatment = await entityManager.save(treatment);
+      
+      // Log for debugging
+      console.log(`Treatment ${treatment.id} updated in transaction: amountPaid ${oldAmountPaid} -> ${savedTreatment.amountPaid}, status: ${savedTreatment.status}`);
+    }
+
+    // Save all payment treatment records within transaction
+    if (paymentTreatmentEntities.length > 0) {
+      await entityManager.save(paymentTreatmentEntities);
+    }
+  }
+
+  // 🔄 REVERT PAYMENT TREATMENTS (for updates/deletes)
+  private async revertPaymentTreatments(paymentId: string): Promise<void> {
+    const paymentTreatments = await this.paymentTreatmentRepo.find({
+      where: { paymentId }
+    });
+
+    for (const pt of paymentTreatments) {
+      const treatment = await this.treatmentRepo.findOne({
+        where: { id: pt.treatmentId }
+      });
+
+      if (treatment) {
+        // Revert the paid amount
+        const oldAmountPaid = Number(treatment.amountPaid) || 0;
+        const newAmountPaid = oldAmountPaid - Number(pt.amountPaid);
+        treatment.amountPaid = newAmountPaid;
+        
+        // Ensure amountPaid doesn't go below 0
+        treatment.amountPaid = Math.max(0, treatment.amountPaid);
+        
+        // Update treatment status based on remaining amount
+        if (treatment.amountPaid >= treatment.amount) {
+          treatment.status = TreatmentStatus.COMPLETED;
+        } else if (treatment.amountPaid > 0) {
+          treatment.status = TreatmentStatus.IN_PROGRESS;
+        } else {
+          treatment.status = TreatmentStatus.PLANNED;
+        }
+
+        // Save the updated treatment
+        const savedTreatment = await this.treatmentRepo.save(treatment);
+        
+        // Log for debugging
+        console.log(`Treatment ${treatment.id} reverted: amountPaid ${oldAmountPaid} -> ${savedTreatment.amountPaid}, status: ${savedTreatment.status}`);
+      }
     }
   }
 
@@ -178,17 +297,20 @@ export class PaymentService {
   async update(id: string, dto: UpdatePaymentDto): Promise<Payment> {
     const payment = await this.findById(id);
     
-    // Update payment fields
-    Object.assign(payment, dto);
-
     // Handle payment treatments update if provided
     if (dto.paymentTreatments) {
+      // Revert existing payment treatments and update treatment amounts
+      await this.revertPaymentTreatments(id);
+      
       // Remove existing payment treatments
       await this.paymentTreatmentRepo.delete({ paymentId: id });
       
       // Create new payment treatments
       await this.createPaymentTreatments(id, dto.paymentTreatments);
     }
+
+    // Update payment fields
+    Object.assign(payment, dto);
 
     return await this.paymentRepo.save(payment);
   }
@@ -236,12 +358,26 @@ export class PaymentService {
   // 🗑️ SOFT DELETE
   async remove(id: string): Promise<void> {
     const payment = await this.findById(id);
+    
+    // Revert payment treatments and update treatment amounts
+    await this.revertPaymentTreatments(id);
+    
+    // Remove payment treatment records
+    await this.paymentTreatmentRepo.delete({ paymentId: id });
+    
     await this.paymentRepo.softRemove(payment);
   }
 
   // 🗑️ PERMANENT DELETE (use with caution)
   async permanentRemove(id: string): Promise<void> {
     const payment = await this.findById(id);
+    
+    // Revert payment treatments and update treatment amounts
+    await this.revertPaymentTreatments(id);
+    
+    // Remove payment treatment records
+    await this.paymentTreatmentRepo.delete({ paymentId: id });
+    
     await this.paymentRepo.remove(payment);
   }
 
@@ -270,10 +406,17 @@ export class PaymentService {
       where: {
         patientId,
         tenantId,
-        status: In([TreatmentStatus.PLANNED, TreatmentStatus.COMPLETED]),
+        status: In([TreatmentStatus.PLANNED, TreatmentStatus.IN_PROGRESS, TreatmentStatus.COMPLETED]),
       },
+      relations: ['tenantTreatment'],
       order: { createdAt: 'ASC' }
-    });
+    }).then(treatments => 
+      // Filter treatments that have remaining amounts to be paid
+      treatments.filter(treatment => {
+        const remainingAmount = Number(treatment.amount) - Number(treatment.amountPaid);
+        return remainingAmount > 0;
+      })
+    );
   }
 
   // 🗑️ GET DELETED PAYMENTS
