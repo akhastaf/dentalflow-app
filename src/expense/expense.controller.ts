@@ -9,18 +9,26 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UploadedFile,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { ExpenseService } from './expense.service';
 import { CreateExpenseDto } from './dtos/create-expense.dto';
 import { UpdateExpenseDto } from './dtos/update-expense.dto';
 import { FilterExpenseDto } from './dtos/filter-expense.dto';
 import { Expense, ExpenseStatus } from './entities/expense.entity';
+import { MinioService } from '../minio/minio.service';
 
 @ApiTags('Expenses')
 @Controller('expenses')
 export class ExpenseController {
-  constructor(private readonly expensesService: ExpenseService) {}
+  constructor(
+    private readonly expensesService: ExpenseService,
+    private readonly minioService: MinioService
+  ) {}
 
   // ✅ CREATE EXPENSE
   @Post()
@@ -262,6 +270,198 @@ export class ExpenseController {
     }
   })
   async getRecurrenceFrequencies() {
-    return await this.expensesService.getRecurrenceFrequencies();
+    return [
+      { value: 'daily', label: 'Daily' },
+      { value: 'weekly', label: 'Weekly' },
+      { value: 'monthly', label: 'Monthly' },
+      { value: 'yearly', label: 'Yearly' },
+    ];
+  }
+
+  // 📎 UPLOAD EXPENSE ATTACHMENT
+  @Post(':id/attachment')
+  @ApiOperation({ summary: 'Upload attachment for an expense' })
+  @ApiParam({ name: 'id', description: 'Expense ID' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'File to upload (images, PDFs, documents)'
+        }
+      },
+      required: ['file']
+    }
+  })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Attachment uploaded successfully' 
+  })
+  @ApiResponse({ status: 404, description: 'Expense not found' })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAttachment(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    if (!file) {
+      throw new BadRequestException('No file provided');
+    }
+
+    // Check if expense exists
+    const expense = await this.expensesService.findById(id);
+    if (!expense) {
+      throw new BadRequestException('Expense not found');
+    }
+
+    // Upload file to MinIO
+    const folder = `expenses/${expense.tenantId}`;
+    const result = await this.minioService.uploadFileWithProcessing(file, folder);
+
+    // Extract the file key from the URL (remove the base URL part)
+    const fileKey = result.urls.original.replace(this.minioService.getFileUrl(''), '');
+
+    // Update expense with attachment path (store only the file key, not the full URL)
+    const updatedExpense = await this.expensesService.update(id, {
+      attachmentPath: fileKey
+    });
+
+    return {
+      message: 'Attachment uploaded successfully',
+      expense: updatedExpense,
+      file: {
+        uuid: result.uuid,
+        originalName: result.originalName,
+        safeName: result.safeName,
+        urls: result.urls,
+        size: result.size,
+        isImage: result.isImage,
+        metadata: result.metadata,
+      }
+    };
+  }
+
+  // 📎 GET EXPENSE ATTACHMENT URL
+  @Get(':id/attachment')
+  @ApiOperation({ summary: 'Get attachment URL for an expense' })
+  @ApiParam({ name: 'id', description: 'Expense ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Attachment URL retrieved' 
+  })
+  @ApiResponse({ status: 404, description: 'Expense or attachment not found' })
+  async getAttachmentUrl(@Param('id') id: string) {
+    const expense = await this.expensesService.findById(id);
+    if (!expense) {
+      throw new BadRequestException('Expense not found');
+    }
+
+    if (!expense.attachmentPath) {
+      throw new BadRequestException('No attachment found for this expense');
+    }
+
+    // Handle both old URLs and new file keys
+    let fileKey = expense.attachmentPath;
+    if (fileKey.startsWith('http://') || fileKey.startsWith('https://')) {
+      // Extract file key from URL (remove the base URL part)
+      fileKey = fileKey.replace(this.minioService.getFileUrl(''), '');
+    }
+
+    // Get signed URL for the attachment
+    const signedUrl = await this.minioService.getSignedUrl(fileKey);
+    
+    return {
+      attachmentUrl: signedUrl,
+      attachmentPath: fileKey // Return the file key, not the full URL
+    };
+  }
+
+  // 📎 GET EXPENSE ATTACHMENT INFO
+  @Get(':id/attachment/info')
+  @ApiOperation({ summary: 'Get attachment information including all versions and metadata' })
+  @ApiParam({ name: 'id', description: 'Expense ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Attachment information retrieved' 
+  })
+  @ApiResponse({ status: 404, description: 'Expense or attachment not found' })
+  async getAttachmentInfo(@Param('id') id: string) {
+    const expense = await this.expensesService.findById(id);
+    if (!expense) {
+      throw new BadRequestException('Expense not found');
+    }
+
+    if (!expense.attachmentPath) {
+      throw new BadRequestException('No attachment found for this expense');
+    }
+
+    // Handle both old URLs and new file keys
+    let fileKey = expense.attachmentPath;
+    if (fileKey.startsWith('http://') || fileKey.startsWith('https://')) {
+      // Extract file key from URL (remove the base URL part)
+      fileKey = fileKey.replace(this.minioService.getFileUrl(''), '');
+    }
+
+    // Get file information including all versions
+    const fileInfo = await this.minioService.getFileInfo(fileKey);
+    
+    return {
+      expenseId: id,
+      attachmentPath: fileKey, // Return the file key, not the full URL
+      fileName: fileKey.split('/').pop(),
+      fileInfo
+    };
+  }
+
+  // 📎 DELETE EXPENSE ATTACHMENT
+  @Delete(':id/attachment')
+  @ApiOperation({ summary: 'Delete attachment for an expense' })
+  @ApiParam({ name: 'id', description: 'Expense ID' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Attachment deleted successfully' 
+  })
+  @ApiResponse({ status: 404, description: 'Expense or attachment not found' })
+  async deleteAttachment(@Param('id') id: string) {
+    const expense = await this.expensesService.findById(id);
+    if (!expense) {
+      throw new BadRequestException('Expense not found');
+    }
+
+    if (!expense.attachmentPath) {
+      throw new BadRequestException('No attachment found for this expense');
+    }
+
+    console.log('Before deletion - attachmentPath:', expense.attachmentPath);
+
+    // Handle both old URLs and new file keys
+    let fileKey = expense.attachmentPath;
+    if (fileKey.startsWith('http://') || fileKey.startsWith('https://')) {
+      // Extract file key from URL (remove the base URL part)
+      fileKey = fileKey.replace(this.minioService.getFileUrl(''), '');
+    }
+
+    // Delete file from MinIO (including all image versions if it's an image)
+    await this.minioService.deleteFileWithVersions(fileKey);
+
+    // Update expense to remove attachment path
+    const updatedExpense = await this.expensesService.update(id, {
+      attachmentPath: null
+    });
+
+    // Also try a direct query to ensure the field is cleared
+    await this.expensesService.clearAttachmentPath(id);
+
+    // Fetch the expense again to get the final state
+    const finalExpense = await this.expensesService.findById(id);
+
+    console.log('After deletion - attachmentPath:', finalExpense.attachmentPath);
+
+    return {
+      message: 'Attachment deleted successfully',
+      expense: finalExpense
+    };
   }
 }

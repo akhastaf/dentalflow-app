@@ -157,9 +157,10 @@ export class CreateExpenseDto {
   loanMonths?: number;
 
   @ApiPropertyOptional({ 
-    description: 'Path to attached receipt or file'
+    description: 'Path to attached receipt or file',
+    nullable: true
   })
   @IsString()
   @IsOptional()
-  attachmentPath?: string;
+  attachmentPath?: string | null;
 } 
